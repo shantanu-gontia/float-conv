@@ -51,7 +51,11 @@ func (e invalidArgumentValueError) Error() string {
 
 func parseArgs(args []string) (Args, error) {
 	// Construct default set of arguments
-	parsedArgs := Args{}
+	parsedArgs := Args{
+		precision: 53,
+		format:    "float32",
+		asTable:   false,
+	}
 
 	if len(args) == 0 {
 		return Args{}, noInputError{}
