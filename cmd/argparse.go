@@ -78,9 +78,9 @@ func parseArgs(args []string) (Args, error) {
 		reset                = 0
 		encounteredFirstDash = 1
 		parsedArgChar        = 2
-		startParsingValue    = 4
-		keepParsingValue     = 5
-		doneParsingValue     = 6
+		startParsingValue    = 3
+		keepParsingValue     = 4
+		doneParsingValue     = 5
 		unspecifiedFlag      = 253
 		invalidFlag          = 254
 		done                 = 255
@@ -110,11 +110,11 @@ func parseArgs(args []string) (Args, error) {
 	currentIndex := 0
 
 	for state != done {
-		fmt.Println("State:", stateString[state])
-		fmt.Println("Parse Buffer:", string(parsedBuffer))
-		fmt.Println("Currently Parsing:", string(currentlyParsing))
-		fmt.Println("Current Index:", currentIndex, "/", len(joinedArgs))
-		fmt.Println("----")
+		// fmt.Println("State:", stateString[state])
+		// fmt.Println("Parse Buffer:", string(parsedBuffer))
+		// fmt.Println("Currently Parsing:", string(currentlyParsing))
+		// fmt.Println("Current Index:", currentIndex, "/", len(joinedArgs))
+		// fmt.Println("----")
 		if state == reset {
 			// Reset the state
 			parsedBuffer = make([]byte, 0)
@@ -259,6 +259,12 @@ func parseArgs(args []string) (Args, error) {
 			return parsedArgs, unspecifiedArgumentError{currentlyParsing}
 		}
 		currentIndex++
+	}
+
+	// If successfully parsed other args, then parse the input again with the correct precision
+	x, _, err = big.ParseFloat(args[0], 0, parsedArgs.precision, big.ToZero)
+	if err != nil {
+		return parsedArgs, invalidArgumentValueError{byte(0), args[0]}
 	}
 
 	parsedArgs.input = *x
