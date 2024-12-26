@@ -3,13 +3,13 @@ package bitVisualization
 import "unsafe"
 
 type BFloat16 struct {
-	val uint16
+	Val uint16
 }
 
 // Convert the bit-fields in the BFloat16 struct to a proper floating-point number
 func (input BFloat16) toFloat() float32 {
 	// Upcast to a 32-bit container with 0-padding
-	inputToUint32 := uint32(input.val)
+	inputToUint32 := uint32(input.Val)
 	// Shift the values to the left by 16 to align with Float32
 	inputAlignedToFloat32 := inputToUint32 << 16
 	// Now that the bits are correctly aligned, perform an unsafe cast to float32 ptr and return the dereferenced value
@@ -17,8 +17,8 @@ func (input BFloat16) toFloat() float32 {
 }
 
 // Implementation for the FloatBitFormat interface for BFloat16 numbers.
-// Returns a FloatFormat containing the byte characters for sign, exponent and mantissa bits.
-func (input BFloat16) toFloatFormat() FloatFormat {
+// Returns a FloatBitFormat containing the byte characters for sign, exponent and mantissa bits.
+func (input BFloat16) ToFloatFormat() FloatBitFormat {
 	const (
 		// Masks
 		signBitMask     = 0x8000
@@ -26,7 +26,7 @@ func (input BFloat16) toFloatFormat() FloatFormat {
 		mantissaBitMask = 0x007f
 	)
 
-	inputAsBits := input.val
+	inputAsBits := input.Val
 
 	// Extract Sign Bit
 	signBits := (inputAsBits & signBitMask) >> 15
@@ -71,6 +71,6 @@ func (input BFloat16) toFloatFormat() FloatFormat {
 		mantissaBits >>= 1
 	}
 
-	return FloatFormat{signRetVal, exponentRetVal, mantissaRetVal}
+	return FloatBitFormat{signRetVal, exponentRetVal, mantissaRetVal}
 
 }

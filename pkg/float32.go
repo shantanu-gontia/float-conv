@@ -3,19 +3,25 @@ package bitVisualization
 import "unsafe"
 
 type Float32 struct {
-	val uint32 // Underlying Value stored as float
+	Val uint32 // Underlying Value stored as float
+}
+
+func (f Float32) fromFloat(input float32) Float32 {
+	inputPtr := unsafe.Pointer(&input)
+	f.Val = *(*uint32)(inputPtr)
+	return f
 }
 
 // Convert the bit-fields in the Float32 struct to a proper floating-point number
 func (input Float32) toFloat() float32 {
-	uintPtr := &input.val
+	uintPtr := &input.Val
 	uintPtrAsFloatPtr := (*float32)(unsafe.Pointer(uintPtr))
 	return *uintPtrAsFloatPtr
 }
 
 // Implementation for the FloatBitFormat interface for IEEE-754 Float32 numbers.
 // Returns a FloatFormat containing the byte characters for sign, exponent and mantissa bits.
-func (input Float32) toFloatFormat() FloatFormat {
+func (input Float32) ToFloatFormat() FloatBitFormat {
 	const (
 		// Masks
 		signBitMask     = 0x8000_0000
@@ -23,7 +29,7 @@ func (input Float32) toFloatFormat() FloatFormat {
 		mantissaBitMask = 0x007f_ffff
 	)
 
-	inputAsBits := input.val
+	inputAsBits := input.Val
 
 	// Extract Sign Bit
 	signBits := (signBitMask & inputAsBits) >> 31
@@ -72,5 +78,5 @@ func (input Float32) toFloatFormat() FloatFormat {
 		mantissaBits >>= 1
 	}
 
-	return FloatFormat{signRetVal, exponentRetVal, mantissaRetVal}
+	return FloatBitFormat{signRetVal, exponentRetVal, mantissaRetVal}
 }
