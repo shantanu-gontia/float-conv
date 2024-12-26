@@ -1,4 +1,4 @@
-package bitVisualization
+package floatBitPrint
 
 import (
 	"fmt"
