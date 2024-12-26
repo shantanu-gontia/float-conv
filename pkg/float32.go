@@ -1,6 +1,9 @@
 package bitVisualization
 
-import "unsafe"
+import (
+	"fmt"
+	"unsafe"
+)
 
 type Float32 struct {
 	Val uint32 // Underlying Value stored as float
@@ -79,4 +82,9 @@ func (input Float32) ToFloatFormat() FloatBitFormat {
 	}
 
 	return FloatBitFormat{signRetVal, exponentRetVal, mantissaRetVal}
+}
+
+// Convert the given Float32 Bit representation to a Hexadecimal String
+func (input Float32) ToHexStr() string {
+	return fmt.Sprintf("%#x", input.Val)
 }

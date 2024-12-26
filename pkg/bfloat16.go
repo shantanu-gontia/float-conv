@@ -1,6 +1,9 @@
 package bitVisualization
 
-import "unsafe"
+import (
+	"fmt"
+	"unsafe"
+)
 
 type BFloat16 struct {
 	Val uint16
@@ -73,4 +76,8 @@ func (input BFloat16) ToFloatFormat() FloatBitFormat {
 
 	return FloatBitFormat{signRetVal, exponentRetVal, mantissaRetVal}
 
+}
+
+func (input BFloat16) ToHexStr() string {
+	return fmt.Sprintf("%#x", input.Val)
 }
