@@ -9,14 +9,14 @@ type Float32 struct {
 	Val uint32 // Underlying Value stored as float
 }
 
-func (f Float32) fromFloat(input float32) Float32 {
+func (f Float32) FromFloat(input float32) Float32 {
 	inputPtr := unsafe.Pointer(&input)
 	f.Val = *(*uint32)(inputPtr)
 	return f
 }
 
 // Convert the bit-fields in the Float32 struct to a proper floating-point number
-func (input Float32) toFloat() float32 {
+func (input Float32) ToFloat() float32 {
 	uintPtr := &input.Val
 	uintPtrAsFloatPtr := (*float32)(unsafe.Pointer(uintPtr))
 	return *uintPtrAsFloatPtr
