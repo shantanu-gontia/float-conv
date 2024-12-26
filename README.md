@@ -25,8 +25,8 @@ $ float-conv 0.125 -f=float32
 Sign: 0, Exponent: 00111110, Mantissa: 00000000000000000000000
 
 $ float-conv 0.125 -f=float32 -t=true
-Sign|Exponent|               Mantissa|
-   0|00111110|00000000000000000000000|
+|Sign|Exponent|               Mantissa|
+|   0|00111110|00000000000000000000000|
 ```
 
 ## Roadmap
