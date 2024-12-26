@@ -48,8 +48,8 @@ func (f FloatBitFormat) AsTable() string {
 	sb := strings.Builder{}
 
 	writer := tabwriter.NewWriter(&sb, 0, 0, 0, ' ', tabwriter.AlignRight|tabwriter.Debug)
-	fmt.Fprintf(writer, "%s\t%s\t%s\t\n", signStr, exponentStr, mantissaStr)
-	fmt.Fprintf(writer, "%s\t%s\t%s\t\n", string(f.Sign), string(f.Exponent), string(f.Mantissa))
+	fmt.Fprintf(writer, "\t%s\t%s\t%s\t\n", signStr, exponentStr, mantissaStr)
+	fmt.Fprintf(writer, "\t%s\t%s\t%s\t\n", string(f.Sign), string(f.Exponent), string(f.Mantissa))
 	writer.Flush()
 
 	return sb.String()
