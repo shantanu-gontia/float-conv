@@ -1,8 +1,6 @@
 package bitVisualization
 
-import (
-	"unsafe"
-)
+import "unsafe"
 
 type Float32 struct {
 	val uint32 // Underlying Value stored as float
@@ -25,25 +23,30 @@ func (input Float32) toFloatFormat() FloatFormat {
 		mantissaBitMask = 0x007f_ffff
 	)
 
-	// Cast to unsafe Pointer to get at the bits
-	floatPtrUnsafe := unsafe.Pointer(&input.val)
-	// Cast to uint32ptr to get access to bitwise operations
-	inputAsBits := *(*uint32)(floatPtrUnsafe)
+	inputAsBits := input.val
 
-	// Construct Sign Bits
+	// Extract Sign Bit
 	signBits := (signBitMask & inputAsBits) >> 31
 
-	// Construct Exponent Bits
+	// Extract Exponent Bits
 	exponentBits := (exponentBitMask & inputAsBits) >> 23
+
+	// Extract Mantissa Bits
 	mantissaBits := mantissaBitMask & inputAsBits
 
 	// Iterate over the bits and construct the return Values
+
 	// 1 Sign Bit
-	signRetVal := []byte{byte(signBits)}
+	signRetVal := make([]byte, 0, 1)
+	if signBits == 0 {
+		signRetVal = append(signRetVal, byte('0'))
+	} else {
+		signRetVal = append(signRetVal, byte('1'))
+	}
 
 	// 8 Exponent Bits
 	exponentRetVal := make([]byte, 0, 8)
-	for exponentBits != 0 {
+	for i := 0; i < 8; i++ {
 		currentExponentBit := exponentBits & 0x1
 		var valueToAppend byte
 		if currentExponentBit == 0 {
@@ -59,7 +62,13 @@ func (input Float32) toFloatFormat() FloatFormat {
 	mantissaRetVal := make([]byte, 0, 23)
 	for i := 0; i < 23; i++ {
 		currentMantissaBit := mantissaBits & 0x1
-		mantissaRetVal = append(mantissaRetVal, byte(currentMantissaBit))
+		var valueToAppend byte
+		if currentMantissaBit == 0 {
+			valueToAppend = '0'
+		} else {
+			valueToAppend = '1'
+		}
+		mantissaRetVal = append(mantissaRetVal, valueToAppend)
 		mantissaBits >>= 1
 	}
 
