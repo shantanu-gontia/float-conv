@@ -2,6 +2,7 @@ package bitVisualization
 
 import (
 	"fmt"
+	"math"
 	"unsafe"
 )
 
@@ -9,14 +10,26 @@ type BFloat16 struct {
 	Val uint16
 }
 
+// Convert the input float32 into Float32 format by turning the float32 into its bits
+// and truncating the extra precision bits
+func (bf BFloat16) FromFloat(input float32) BFloat16 {
+	// Truncate the input to 7 mantissa precision (to make the number into BF16)
+	// Combine with shifting left by 16 to fit in uint16
+	// We need to reinterpret the float32 as bits before that
+	inputAsUint32 := math.Float32bits(input)
+	inputAsUint32 >>= 16
+	bf.Val = uint16(inputAsUint32)
+	return bf
+}
+
 // Convert the bit-fields in the BFloat16 struct to a proper floating-point number
-func (input BFloat16) toFloat() float32 {
+func (bf BFloat16) ToFloat() float32 {
 	// Upcast to a 32-bit container with 0-padding
-	inputToUint32 := uint32(input.Val)
+	sourceToUint32 := uint32(bf.Val)
 	// Shift the values to the left by 16 to align with Float32
-	inputAlignedToFloat32 := inputToUint32 << 16
+	sourceAligned := sourceToUint32 << 16
 	// Now that the bits are correctly aligned, perform an unsafe cast to float32 ptr and return the dereferenced value
-	return *(*float32)(unsafe.Pointer(&inputAlignedToFloat32))
+	return *(*float32)(unsafe.Pointer(&sourceAligned))
 }
 
 // Implementation for the FloatBitFormat interface for BFloat16 numbers.

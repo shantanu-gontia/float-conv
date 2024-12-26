@@ -2,24 +2,22 @@ package bitVisualization
 
 import (
 	"fmt"
-	"unsafe"
+	"math"
 )
 
 type Float32 struct {
 	Val uint32 // Underlying Value stored as float
 }
 
+// Convert the input float32 into Float32 format by turning the float32 into its bits
 func (f Float32) FromFloat(input float32) Float32 {
-	inputPtr := unsafe.Pointer(&input)
-	f.Val = *(*uint32)(inputPtr)
+	f.Val = math.Float32bits(input)
 	return f
 }
 
 // Convert the bit-fields in the Float32 struct to a proper floating-point number
 func (input Float32) ToFloat() float32 {
-	uintPtr := &input.Val
-	uintPtrAsFloatPtr := (*float32)(unsafe.Pointer(uintPtr))
-	return *uintPtrAsFloatPtr
+	return math.Float32frombits(input.Val)
 }
 
 // Implementation for the FloatBitFormat interface for IEEE-754 Float32 numbers.
