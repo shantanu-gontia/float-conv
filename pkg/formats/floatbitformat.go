@@ -1,4 +1,4 @@
-package floatBitPrint
+package floatBit
 
 import (
 	"fmt"
