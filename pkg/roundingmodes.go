@@ -1,4 +1,4 @@
-package roundingModes
+package floatBit
 
 // Package roundingModes provides constants (enum) for different rounding modes.
 // Rounding modes determine how to round a number when it cannot be represented exactly.
