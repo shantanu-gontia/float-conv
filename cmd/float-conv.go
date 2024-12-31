@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	floatBitPrint "github.com/shantanu-gontia/float-conv/pkg"
+	floatBit "github.com/shantanu-gontia/float-conv/pkg"
 )
 
 func init() {
@@ -32,7 +32,7 @@ func main() {
 	switch format {
 	case "float32":
 		floatVal, _ := input.Float32()
-		floatBitVal := floatBitPrint.Float32{}.FromFloat(floatVal)
+		floatBitVal := floatBit.Float32{}.FromFloat(floatVal)
 		if asTable {
 			fmt.Printf("%s", floatBitVal.ToFloatFormat().AsTable())
 		} else {
@@ -40,7 +40,7 @@ func main() {
 		}
 	case "bfloat16":
 		floatVal, _ := input.Float32()
-		floatBitVal := floatBitPrint.BFloat16{}.FromFloat(floatVal)
+		floatBitVal := floatBit.BFloat16{}.FromFloat(floatVal)
 		if asTable {
 			fmt.Printf("%s", floatBitVal.ToFloatFormat().AsTable())
 		} else {

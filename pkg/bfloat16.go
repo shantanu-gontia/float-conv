@@ -1,11 +1,14 @@
-package floatBitPrint
+package floatBit
 
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"unsafe"
 )
 
+// A type wrapper to store the underlying bits of the BFloat16 format
+// BFloat16 is a popular floating-point format used in machine learning
 type BFloat16 struct {
 	Val uint16
 }
@@ -22,7 +25,7 @@ func (bf BFloat16) FromFloat(input float32) BFloat16 {
 	return bf
 }
 
-// Convert the bit-fields in the BFloat16 struct to a proper floating-point number
+// Convert the bits the BFloat16 struct to a proper floating-point number type
 func (bf BFloat16) ToFloat() float32 {
 	// Upcast to a 32-bit container with 0-padding
 	sourceToUint32 := uint32(bf.Val)
@@ -30,6 +33,14 @@ func (bf BFloat16) ToFloat() float32 {
 	sourceAligned := sourceToUint32 << 16
 	// Now that the bits are correctly aligned, perform an unsafe cast to float32 ptr and return the dereferenced value
 	return *(*float32)(unsafe.Pointer(&sourceAligned))
+}
+
+// Convert the bit-fields in the BFloat16 struct to an arbitrary-precision floating point number
+// The precision of the returned big.Float is the default 53
+func (bf BFloat16) ToBigFloat() big.Float {
+	// Convert to float32 first, which is natively supported by big.Float
+	asFloat := bf.ToFloat()
+	return *big.NewFloat(float64(asFloat))
 }
 
 // Implementation for the FloatBitFormat interface for BFloat16 numbers.

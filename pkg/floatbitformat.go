@@ -1,4 +1,4 @@
-package floatBitPrint
+package floatBit
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"text/tabwriter"
 )
 
-// FloatBitFormat type represents a generalized unpacked bit-representation of a floating-point format
+// FloatBitFormat type represents a generalized unpacked bit-representation of a radix-2 floating-point format
 // Each of the three fields Sign, Exponent and Mantissa are represented as byte slices which contain
 // either '0' or '1' as their entries
 type FloatBitFormat struct {
