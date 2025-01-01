@@ -49,7 +49,7 @@ const (
 	BFloat16ExponentBias = 127
 )
 
-func (bf BFloat16) FromBigFloat(input *big.Float, r floatBit.RoundingMode, o outOfBounds.OverflowMode,
+func FromBigFloat(input *big.Float, r floatBit.RoundingMode, o outOfBounds.OverflowMode,
 	u outOfBounds.UnderflowMode) (BFloat16, big.Accuracy, outOfBounds.Status) {
 	input.SetMode(r.ToBigRoundingMode())
 
@@ -57,11 +57,11 @@ func (bf BFloat16) FromBigFloat(input *big.Float, r floatBit.RoundingMode, o out
 	var retStatus outOfBounds.Status
 
 	// We use an intermediate step where we convert to Float32 first since big.Float supports it natively
-	Float32Val, acc, status := Float32.Float32{}.FromBigFloat(input, r)
+	Float32Val, acc, status := Float32.FromBigFloat(input, r, o, u)
 	retAcc = acc
 	retStatus = status
 
-	BFloat16Val, acc, status := bf.FromFloat(Float32Val.ToFloat(), r, o, u)
+	BFloat16Val, acc, status := FromFloat(Float32Val.ToFloat(), r, o, u)
 	// We update the accuracy only if the Float32 was converted with big.Exact
 	if retAcc == big.Exact {
 		retAcc = acc
@@ -76,7 +76,7 @@ func (bf BFloat16) FromBigFloat(input *big.Float, r floatBit.RoundingMode, o out
 
 // Convert the input float32 into BFloat16 type. Since BFloat16 has less precision,
 // we use the provided RoundingMode to determine the tie breaking during rounding.
-func (bf BFloat16) FromFloat(input float32, r floatBit.RoundingMode, o outOfBounds.OverflowMode,
+func FromFloat(input float32, r floatBit.RoundingMode, o outOfBounds.OverflowMode,
 	u outOfBounds.UnderflowMode) (BFloat16, big.Accuracy, outOfBounds.Status) {
 	// Truncate the input to 7 mantissa precision (to make the number into BF16)
 	// Combine with shifting left by 16 to fit in uint16
@@ -181,7 +181,7 @@ func FromFloatRNE(input float32, om outOfBounds.OverflowMode, um outOfBounds.Und
 	// First we convert the number to its bits, so we can manipulate at the
 	// bit-level
 	floatBits := math.Float32bits(input)
-	signBits, _, mantissaBits := Float32.Float32{}.FromFloat(input).ExtractFields()
+	signBits, _, mantissaBits := Float32.FromFloat(input).ExtractFields()
 
 	// Handle Special Cases
 
@@ -227,7 +227,7 @@ func FromFloatRNE(input float32, om outOfBounds.OverflowMode, um outOfBounds.Und
 	if m15 == 0 {
 		// Case 1
 		return roundDown(input, um)
-	} else if m15 == 1 && m14ToM0 != 0 {
+	} else if m15 != 0 && m14ToM0 != 0 {
 		// Case 2
 		return roundUp(input, om)
 	}
@@ -344,6 +344,7 @@ func roundUp(input float32, om outOfBounds.OverflowMode) (BFloat16, big.Accuracy
 	// from the truncated value. We'll add this later
 	truncatedValNoSign := truncatedVal & 0x7fff
 	truncatedValNoSignPlusOne := truncatedValNoSign + 1
+	retVal = truncatedValNoSignPlusOne
 	// It is possible that this addition, might have spilled over to the exponent. The spillover could also have
 	// caused the exponent to overflow in which case there will be a 1 in the sign bit.
 	// If the exponent did overflow, then we consult the overflow mode for the result
@@ -370,7 +371,6 @@ func roundUp(input float32, om outOfBounds.OverflowMode) (BFloat16, big.Accuracy
 			}
 		}
 	}
-
 	return BFloat16{retVal}, retAcc, retStatus
 
 }
