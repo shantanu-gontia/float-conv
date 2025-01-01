@@ -1,6 +1,7 @@
 package Float32
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -25,6 +26,12 @@ const (
 
 	Float32NegativeZero = 0x8000_0000
 	Float32PositiveZero = 0x0000_0000
+
+	Float32PositiveMaxNormal = 0x7f7fffff
+	Float32NegativeMaxNormal = 0xff7fffff
+
+	Float32PositiveMinSubnormal = 0x00000001
+	Float32NegativeMinSubnormal = 0x80000001
 
 	Float32ExponentBias = 127
 )
@@ -51,7 +58,7 @@ func (input Float32) ToBigFloat() big.Float {
 // Use roundingMode to determine how to break ties when an exact match is not possible
 // Returns the converted bits, and a big.Accuracy which represents the difference from the exact match.
 func (input Float32) FromBigFloat(bigf *big.Float,
-	r floatBit.RoundingMode) (Float32, big.Accuracy, outOfBounds.Status) {
+	r floatBit.RoundingMode, om outOfBounds.OverflowMode, um outOfBounds.UnderflowMode) (Float32, big.Accuracy, outOfBounds.Status) {
 	bigf.SetMode(r.ToBigRoundingMode())
 
 	asFloat, acc := bigf.Float32()
@@ -59,11 +66,55 @@ func (input Float32) FromBigFloat(bigf *big.Float,
 
 	// Check for overflow
 	if (input.Val == Float32PositiveInfinity || input.Val == Float32NegativeInfinity) && !bigf.IsInf() {
+		switch om {
+		case outOfBounds.SaturateInf:
+			if asFloat > 0 {
+				input.Val = Float32PositiveInfinity
+				acc = big.Above
+			} else {
+				input.Val = Float32NegativeInfinity
+				acc = big.Below
+			}
+		case outOfBounds.MakeNaN:
+			if asFloat > 0 {
+				input.Val = Float32PositiveInfinity + 1
+			} else {
+				input.Val = Float32NegativeInfinity + 1
+			}
+		case outOfBounds.SaturateMax:
+			if asFloat > 0 {
+				input.Val = Float32PositiveMaxNormal
+				acc = big.Below
+			} else {
+				input.Val = Float32NegativeMaxNormal
+				acc = big.Above
+			}
+		}
 		return input, acc, outOfBounds.Overflow
 	}
 
 	// Check for underflow
+	// bigf.Sign() == 0 is only true if bigf is zero. So we use it as a equality check here
+	// If big float was non-zero, but rounded value was zero => underflow
 	if (bigf.Sign() != 0) && (input.Val == Float32PositiveZero || input.Val == Float32NegativeZero) {
+		switch um {
+		case outOfBounds.FlushToZero:
+			if asFloat > 0 {
+				input.Val = Float32PositiveZero
+				acc = big.Below
+			} else {
+				input.Val = Float32NegativeZero
+				acc = big.Above
+			}
+		case outOfBounds.SaturateMin:
+			if asFloat > 0 {
+				input.Val = Float32PositiveMinSubnormal
+				acc = big.Above
+			} else {
+				input.Val = Float32NegativeMinSubnormal
+				acc = big.Below
+			}
+		}
 		return input, acc, outOfBounds.Underflow
 	}
 
@@ -138,4 +189,29 @@ func (input Float32) ExtractFields() (uint32, uint32, uint32) {
 // Convert the given Float32 Bit representation to a Hexadecimal String
 func (input Float32) ToHexStr() string {
 	return fmt.Sprintf("%#x", input.Val)
+}
+
+// Return the difference between this float32 Value and a big.Float value
+// where the big.Float value is supposed to be the number this value is
+// rounded from. If the input is a NaN then returns an error.
+// If either of the inputs is an infinity, returns infinity
+func (input Float32) ConversionError(bf *big.Float) (big.Float, error) {
+	asFloat := input.ToFloat()
+
+	// NaN reports an error. It is the only error case for conversion
+	if math.IsNaN(float64(asFloat)) {
+		return big.Float{}, errors.New("NaN not supported")
+	}
+
+	// If either number is Inf, the difference is +Inf
+	if math.IsInf(float64(asFloat), 0) || bf.IsInf() {
+		return *big.NewFloat(math.Inf(1)), nil
+	}
+
+	// Finally, regular numbers, we just convert the input to big.Float
+	// and report the difference
+	asBigFloat := input.ToBigFloat()
+	asBigFloat.Sub(&asBigFloat, bf)
+
+	return asBigFloat, nil
 }
