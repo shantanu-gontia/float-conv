@@ -20,7 +20,9 @@ const (
 	RoundNearestEven RoundingMode = 1
 )
 
-func (r RoundingMode) toBigRoundingMode() big.RoundingMode {
+// Returns the equivalent rounding mode constant defined in the big stdlib
+// package
+func (r RoundingMode) ToBigRoundingMode() big.RoundingMode {
 	switch r {
 	case 0:
 		return big.ToZero
