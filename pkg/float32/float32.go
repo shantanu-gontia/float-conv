@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	floatBit "github.com/shantanu-gontia/float-conv/pkg"
+	outOfBounds "github.com/shantanu-gontia/float-conv/pkg/oob"
 )
 
 // A type wrapper to store the underlying bits of the Float32 format
@@ -49,11 +50,23 @@ func (input Float32) ToBigFloat() big.Float {
 // Convert the big.Float input to a float32 format and subsequently, to the Float32 Type.
 // Use roundingMode to determine how to break ties when an exact match is not possible
 // Returns the converted bits, and a big.Accuracy which represents the difference from the exact match.
-func (input Float32) FromBigFloat(bigf big.Float, r floatBit.RoundingMode) (Float32, big.Accuracy) {
+func (input Float32) FromBigFloat(bigf big.Float, r floatBit.RoundingMode) (Float32, big.Accuracy, outOfBounds.Status) {
 	bigf.SetMode(r.ToBigRoundingMode())
+
 	asFloat, acc := bigf.Float32()
 	input = input.FromFloat(asFloat)
-	return input, acc
+
+	// Check for overflow
+	if (input.Val == Float32PositiveInfinity || input.Val == Float32NegativeInfinity) && !bigf.IsInf() {
+		return input, acc, outOfBounds.Overflow
+	}
+
+	// Check for underflow
+	if (bigf.Sign() != 0) && (input.Val == Float32PositiveZero || input.Val == Float32NegativeZero) {
+		return input, acc, outOfBounds.Underflow
+	}
+
+	return input, acc, outOfBounds.Fits
 }
 
 // Implementation for the FloatBitFormat interface for IEEE-754 Float32 numbers.
