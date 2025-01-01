@@ -57,3 +57,17 @@ const (
 	Underflow  Status = 2
 	NoEncoding Status = 3
 )
+
+func (s Status) String() string {
+	switch s {
+	case Fits:
+		return "fits"
+	case Overflow:
+		return "overflow"
+	case Underflow:
+		return "underflow"
+	case NoEncoding:
+		return "no_encoding"
+	}
+	return ""
+}
