@@ -17,29 +17,29 @@ type Float32 struct {
 
 // Some Float32 Constants
 const (
-	Float32SignMask     = 0x8000_0000
-	Float32ExponentMask = 0x7f80_0000
-	Float32MantissaMask = 0x007f_ffff
+	Float32SignMask     uint32 = 0x8000_0000
+	Float32ExponentMask uint32 = 0x7f80_0000
+	Float32MantissaMask uint32 = 0x007f_ffff
 
-	Float32PositiveInfinity = 0x7f80_0000
-	Float32NegativeInfinity = 0xff80_0000
+	Float32PositiveInfinity uint32 = 0x7f80_0000
+	Float32NegativeInfinity uint32 = 0xff80_0000
 
-	Float32NegativeZero = 0x8000_0000
-	Float32PositiveZero = 0x0000_0000
+	Float32NegativeZero uint32 = 0x8000_0000
+	Float32PositiveZero uint32 = 0x0000_0000
 
-	Float32PositiveMaxNormal = 0x7f7fffff
-	Float32NegativeMaxNormal = 0xff7fffff
+	Float32PositiveMaxNormal uint32 = 0x7f7fffff
+	Float32NegativeMaxNormal uint32 = 0xff7fffff
 
-	Float32PositiveMinSubnormal = 0x00000001
-	Float32NegativeMinSubnormal = 0x80000001
+	Float32PositiveMinSubnormal uint32 = 0x00000001
+	Float32NegativeMinSubnormal uint32 = 0x80000001
 
-	Float32ExponentBias = 127
+	Float32ExponentBias int = 127
 )
 
 // Convert the input float32 into Float32 format by turning the float32 into its bits
-func (f Float32) FromFloat(input float32) Float32 {
-	f.Val = math.Float32bits(input)
-	return f
+func FromFloat(input float32) Float32 {
+	asBits := math.Float32bits(input)
+	return Float32{asBits}
 }
 
 // Convert the bit-fields in the Float32 struct to a proper floating-point number
@@ -57,68 +57,68 @@ func (input Float32) ToBigFloat() big.Float {
 // Convert the big.Float input to a float32 format and subsequently, to the Float32 Type.
 // Use roundingMode to determine how to break ties when an exact match is not possible
 // Returns the converted bits, and a big.Accuracy which represents the difference from the exact match.
-func (input Float32) FromBigFloat(bigf *big.Float,
+func FromBigFloat(bigf *big.Float,
 	r floatBit.RoundingMode, om outOfBounds.OverflowMode, um outOfBounds.UnderflowMode) (Float32, big.Accuracy, outOfBounds.Status) {
 	bigf.SetMode(r.ToBigRoundingMode())
 
 	asFloat, acc := bigf.Float32()
-	input = input.FromFloat(asFloat)
+	retVal := FromFloat(asFloat).Val
 
 	// Check for overflow
-	if (input.Val == Float32PositiveInfinity || input.Val == Float32NegativeInfinity) && !bigf.IsInf() {
+	if (retVal == Float32PositiveInfinity || retVal == Float32NegativeInfinity) && !bigf.IsInf() {
 		switch om {
 		case outOfBounds.SaturateInf:
 			if asFloat > 0 {
-				input.Val = Float32PositiveInfinity
+				retVal = Float32PositiveInfinity
 				acc = big.Above
 			} else {
-				input.Val = Float32NegativeInfinity
+				retVal = Float32NegativeInfinity
 				acc = big.Below
 			}
 		case outOfBounds.MakeNaN:
 			if asFloat > 0 {
-				input.Val = Float32PositiveInfinity + 1
+				retVal = Float32PositiveInfinity + 1
 			} else {
-				input.Val = Float32NegativeInfinity + 1
+				retVal = Float32NegativeInfinity + 1
 			}
 		case outOfBounds.SaturateMax:
 			if asFloat > 0 {
-				input.Val = Float32PositiveMaxNormal
+				retVal = Float32PositiveMaxNormal
 				acc = big.Below
 			} else {
-				input.Val = Float32NegativeMaxNormal
+				retVal = Float32NegativeMaxNormal
 				acc = big.Above
 			}
 		}
-		return input, acc, outOfBounds.Overflow
+		return Float32{retVal}, acc, outOfBounds.Overflow
 	}
 
 	// Check for underflow
 	// bigf.Sign() == 0 is only true if bigf is zero. So we use it as a equality check here
 	// If big float was non-zero, but rounded value was zero => underflow
-	if (bigf.Sign() != 0) && (input.Val == Float32PositiveZero || input.Val == Float32NegativeZero) {
+	if (bigf.Sign() != 0) && (retVal == Float32PositiveZero || retVal == Float32NegativeZero) {
 		switch um {
 		case outOfBounds.FlushToZero:
 			if asFloat > 0 {
-				input.Val = Float32PositiveZero
+				retVal = Float32PositiveZero
 				acc = big.Below
 			} else {
-				input.Val = Float32NegativeZero
+				retVal = Float32NegativeZero
 				acc = big.Above
 			}
 		case outOfBounds.SaturateMin:
 			if asFloat > 0 {
-				input.Val = Float32PositiveMinSubnormal
+				retVal = Float32PositiveMinSubnormal
 				acc = big.Above
 			} else {
-				input.Val = Float32NegativeMinSubnormal
+				retVal = Float32NegativeMinSubnormal
 				acc = big.Below
 			}
 		}
-		return input, acc, outOfBounds.Underflow
+		return Float32{retVal}, acc, outOfBounds.Underflow
 	}
 
-	return input, acc, outOfBounds.Fits
+	return Float32{retVal}, acc, outOfBounds.Fits
 }
 
 // Implementation for the FloatBitFormat interface for IEEE-754 Float32 numbers.
@@ -138,30 +138,26 @@ func (input Float32) ToFloatFormat() floatBit.FloatBitFormat {
 	}
 
 	// 8 Exponent Bits
-	exponentRetVal := make([]byte, 0, 8)
-	for i := 0; i < 8; i++ {
+	exponentRetVal := make([]byte, 8)
+	for i := 7; i >= 0; i-- {
 		currentExponentBit := exponentBits & 0x1
-		var valueToAppend byte
 		if currentExponentBit == 0 {
-			valueToAppend = '0'
+			exponentRetVal[i] = '0'
 		} else {
-			valueToAppend = '1'
+			exponentRetVal[i] = '1'
 		}
-		exponentRetVal = append(exponentRetVal, valueToAppend)
 		exponentBits >>= 1
 	}
 
 	// 23 Mantissa Bits
-	mantissaRetVal := make([]byte, 0, 23)
-	for i := 0; i < 23; i++ {
+	mantissaRetVal := make([]byte, 23)
+	for i := 22; i >= 0; i-- {
 		currentMantissaBit := mantissaBits & 0x1
-		var valueToAppend byte
 		if currentMantissaBit == 0 {
-			valueToAppend = '0'
+			mantissaRetVal[i] = '0'
 		} else {
-			valueToAppend = '1'
+			mantissaRetVal[i] = '1'
 		}
-		mantissaRetVal = append(mantissaRetVal, valueToAppend)
 		mantissaBits >>= 1
 	}
 
