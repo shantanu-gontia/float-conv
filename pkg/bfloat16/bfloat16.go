@@ -1,6 +1,7 @@
 package BFloat16
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -372,4 +373,29 @@ func roundUp(input float32, om outOfBounds.OverflowMode) (BFloat16, big.Accuracy
 
 	return BFloat16{retVal}, retAcc, retStatus
 
+}
+
+// Return the difference between this BFloat16 Value and a big.Float value
+// where the big.Float value is supposed to be the number this value is
+// rounded from. If the input is a NaN then returns an error.
+// If either of the inputs is an infinity, returns infinity
+func (input BFloat16) ConversionError(bf *big.Float) (big.Float, error) {
+	asFloat := input.ToFloat()
+
+	// NaN reports an error. It is the only error case for conversion
+	if math.IsNaN(float64(asFloat)) {
+		return big.Float{}, errors.New("NaN not supported")
+	}
+
+	// If either number is Inf, the difference is +Inf
+	if math.IsInf(float64(asFloat), 0) || bf.IsInf() {
+		return *big.NewFloat(math.Inf(1)), nil
+	}
+
+	// Finally, regular numbers, we just convert the input to big.Float
+	// and report the difference
+	asBigFloat := input.ToBigFloat()
+	asBigFloat.Sub(&asBigFloat, bf)
+
+	return asBigFloat, nil
 }
