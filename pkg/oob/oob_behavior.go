@@ -25,8 +25,8 @@ const (
 // OverflowError is used to report whether an arithmetic operation (in our case we're limited to rounding)
 // causes an overflow (in the destination format)
 type OverflowError struct {
-	base  string
-	value string
+	Base  string
+	Value string
 }
 
 func (e OverflowError) Error() string {
@@ -53,8 +53,8 @@ const (
 // UnderflowError is used to report whether an arithmetic operation (in our case we're limited to rounding)
 // causes an underflow (in the destination format)
 type UnderflowError struct {
-	base  string
-	value string
+	Base  string
+	Value string
 }
 
 func (e UnderflowError) Error() string {
