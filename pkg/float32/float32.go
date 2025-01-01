@@ -50,7 +50,8 @@ func (input Float32) ToBigFloat() big.Float {
 // Convert the big.Float input to a float32 format and subsequently, to the Float32 Type.
 // Use roundingMode to determine how to break ties when an exact match is not possible
 // Returns the converted bits, and a big.Accuracy which represents the difference from the exact match.
-func (input Float32) FromBigFloat(bigf big.Float, r floatBit.RoundingMode) (Float32, big.Accuracy, outOfBounds.Status) {
+func (input Float32) FromBigFloat(bigf *big.Float,
+	r floatBit.RoundingMode) (Float32, big.Accuracy, outOfBounds.Status) {
 	bigf.SetMode(r.ToBigRoundingMode())
 
 	asFloat, acc := bigf.Float32()

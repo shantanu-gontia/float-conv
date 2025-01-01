@@ -48,16 +48,46 @@ const (
 	BFloat16ExponentBias = 127
 )
 
+func (bf BFloat16) FromBigFloat(input *big.Float, r floatBit.RoundingMode, o outOfBounds.OverflowMode,
+	u outOfBounds.UnderflowMode) (BFloat16, big.Accuracy, outOfBounds.Status) {
+	input.SetMode(r.ToBigRoundingMode())
+
+	var retAcc big.Accuracy
+	var retStatus outOfBounds.Status
+
+	// We use an intermediate step where we convert to Float32 first since big.Float supports it natively
+	Float32Val, acc, status := Float32.Float32{}.FromBigFloat(input, r)
+	retAcc = acc
+	retStatus = status
+
+	BFloat16Val, acc, status := bf.FromFloat(Float32Val.ToFloat(), r, o, u)
+	// We update the accuracy only if the Float32 was converted with big.Exact
+	if retAcc == big.Exact {
+		retAcc = acc
+	}
+	// We update the overflow status only if the Float32 was converted with outOfBounds.fits
+	if retStatus == outOfBounds.Fits {
+		retStatus = status
+	}
+
+	return BFloat16Val, retAcc, retStatus
+}
+
 // Convert the input float32 into BFloat16 type. Since BFloat16 has less precision,
 // we use the provided RoundingMode to determine the tie breaking during rounding.
-func (bf BFloat16) FromFloat(input float32, r floatBit.RoundingMode) BFloat16 {
+func (bf BFloat16) FromFloat(input float32, r floatBit.RoundingMode, o outOfBounds.OverflowMode,
+	u outOfBounds.UnderflowMode) (BFloat16, big.Accuracy, outOfBounds.Status) {
 	// Truncate the input to 7 mantissa precision (to make the number into BF16)
 	// Combine with shifting left by 16 to fit in uint16
 	// We need to reinterpret the float32 as bits before that
-	inputAsUint32 := math.Float32bits(input)
-	inputAsUint32 >>= 16
-	bf.Val = uint16(inputAsUint32)
-	return bf
+	switch r {
+	case floatBit.RNE:
+		return FromFloatRNE(input, o, u)
+	case floatBit.RTZ:
+		fallthrough
+	default:
+		return FromFloatRTZ(input, o, u)
+	}
 }
 
 // Convert the bits the BFloat16 struct to a proper floating-point number type
