@@ -1,7 +1,5 @@
 package floatBit
 
-import "fmt"
-
 // Overflow mode controls the behavior of rounding for the cases, where
 // after rounding, the result overflows (i.e. the result is larger than the
 // maximum value in magnitude that can be represented in the destination format)
@@ -14,24 +12,13 @@ type OverflowMode uint8
 // SaturateMax: If the result overflows, then the result is Max Normal value
 // in the result format (sign is retained)
 //
-// Overflow: If the result overflows, then the result is Inf. If the destination
+// SaturateInf: If the result overflows, then the result is Inf. If the destination
 // format supports signed infinities then the sign is retained
 const (
 	MakeNaN     OverflowMode = 0
 	SaturateMax OverflowMode = 1
-	Overflow    OverflowMode = 2
+	SaturateInf OverflowMode = 2
 )
-
-// OverflowError is used to report whether an arithmetic operation (in our case we're limited to rounding)
-// causes an overflow (in the destination format)
-type OverflowError struct {
-	Base  string
-	Value string
-}
-
-func (e OverflowError) Error() string {
-	return fmt.Sprintf("Overflow Error. Value %s could not be represented in %s.", e.value, e.base)
-}
 
 // Underflow mode controls the behavior of rounding for the cases, where
 // after rounding, the result underflows (i.e. the result is smaller than the
@@ -47,16 +34,26 @@ type UnderflowMode uint8
 // If the format supports signed zeros, then the sign is retained.
 const (
 	SaturateMin UnderflowMode = 0
-	Underflow   UnderflowMode = 1
+	FlushToZero UnderflowMode = 1
 )
 
-// UnderflowError is used to report whether an arithmetic operation (in our case we're limited to rounding)
-// causes an underflow (in the destination format)
-type UnderflowError struct {
-	Base  string
-	Value string
-}
+// Status represents the status of the operation, with regards to overflow/underflow.
+type Status byte
 
-func (e UnderflowError) Error() string {
-	return fmt.Sprintf("Underflow Error. Value %s could not be represented in %s.", e.value, e.base)
-}
+// Status
+//
+// Fits: The result fits in the destination format. Doesn't overflow or underflow
+//
+// Overflow: Result doesn't fit in the destination format. Causes overflow.
+//
+// Underflow: Result doesn't fit in the destination format. Causes underflow.
+//
+// NoEncoding: Result doesn't have a value in the destination format. This should
+// only be used for special cases. Like when the result is a negative infinity,
+// but the destination format does not support signed infinites.
+const (
+	Fits       Status = 0
+	Overflow   Status = 1
+	Underflow  Status = 2
+	NoEncoding Status = 3
+)
