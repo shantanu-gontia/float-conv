@@ -20,6 +20,20 @@ const (
 	SaturateInf OverflowMode = 2
 )
 
+// Stringer interface for OverflowMode
+func (o OverflowMode) String() string {
+	switch o {
+	case MakeNaN:
+		return "MakeNaN"
+	case SaturateMax:
+		return "SaturateMax"
+	case SaturateInf:
+		return "SaturateInf"
+	default:
+		return ""
+	}
+}
+
 // Underflow mode controls the behavior of rounding for the cases, where
 // after rounding, the result underflows (i.e. the result is smaller than the
 // minimum value in magnitude that can be represented in the destination format)
@@ -36,6 +50,18 @@ const (
 	SaturateMin UnderflowMode = 0
 	FlushToZero UnderflowMode = 1
 )
+
+// Stringer interface for UnderflowMode
+func (u UnderflowMode) String() string {
+	switch u {
+	case SaturateMin:
+		return "SaturateMin"
+	case FlushToZero:
+		return "FlushToZero"
+	default:
+		return ""
+	}
+}
 
 // Status represents the status of the operation, with regards to overflow/underflow.
 type Status byte
