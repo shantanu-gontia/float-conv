@@ -30,3 +30,15 @@ func (r RoundingMode) ToBigRoundingMode() big.RoundingMode {
 		return big.ToNearestEven
 	}
 }
+
+// Stringer interface for RoundingMode
+func (r RoundingMode) String() string {
+	switch r {
+	case RTZ:
+		return "RoundTowardsZero"
+	case RNE:
+		return "RoundNearestEven"
+	default:
+		return ""
+	}
+}
