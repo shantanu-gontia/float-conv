@@ -59,8 +59,6 @@ func (input Float32) ToBigFloat() big.Float {
 // Returns the converted bits, and a big.Accuracy which represents the difference from the exact match.
 func FromBigFloat(bigf *big.Float,
 	r floatBit.RoundingMode, om outOfBounds.OverflowMode, um outOfBounds.UnderflowMode) (Float32, big.Accuracy, outOfBounds.Status) {
-	bigf.SetMode(r.ToBigRoundingMode())
-
 	asFloat, acc := bigf.Float32()
 	retVal := FromFloat(asFloat).Val
 
@@ -99,7 +97,7 @@ func FromBigFloat(bigf *big.Float,
 	if (bigf.Sign() != 0) && (retVal == Float32PositiveZero || retVal == Float32NegativeZero) {
 		switch um {
 		case outOfBounds.FlushToZero:
-			if asFloat > 0 {
+			if bigf.Sign() > 0 {
 				retVal = Float32PositiveZero
 				acc = big.Below
 			} else {
@@ -107,7 +105,7 @@ func FromBigFloat(bigf *big.Float,
 				acc = big.Above
 			}
 		case outOfBounds.SaturateMin:
-			if asFloat > 0 {
+			if bigf.Sign() > 0 {
 				retVal = Float32PositiveMinSubnormal
 				acc = big.Above
 			} else {
@@ -205,7 +203,8 @@ func (input Float32) ConversionError(bf *big.Float) (big.Float, error) {
 	}
 
 	// Finally, regular numbers, we just convert the input to big.Float
-	// and report the difference
+	// and report the difference. big.Float.Sub stores the result in the
+	// receiver
 	asBigFloat := input.ToBigFloat()
 	asBigFloat.Sub(&asBigFloat, bf)
 
