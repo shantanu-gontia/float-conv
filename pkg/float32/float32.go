@@ -60,35 +60,44 @@ func (input Float32) ToBigFloat() big.Float {
 func FromBigFloat(bigf *big.Float,
 	r floatBit.RoundingMode, om outOfBounds.OverflowMode, um outOfBounds.UnderflowMode) (Float32, big.Accuracy, outOfBounds.Status) {
 	asFloat, acc := bigf.Float32()
+
 	retVal := FromFloat(asFloat).Val
 
 	// Check for overflow
-	if (retVal == Float32PositiveInfinity || retVal == Float32NegativeInfinity) && !bigf.IsInf() {
-		switch om {
-		case outOfBounds.SaturateInf:
-			if asFloat > 0 {
-				retVal = Float32PositiveInfinity
-				acc = big.Above
-			} else {
-				retVal = Float32NegativeInfinity
-				acc = big.Below
-			}
-		case outOfBounds.MakeNaN:
-			if asFloat > 0 {
-				retVal = Float32PositiveInfinity + 1
-			} else {
-				retVal = Float32NegativeInfinity + 1
-			}
-		case outOfBounds.SaturateMax:
-			if asFloat > 0 {
-				retVal = Float32PositiveMaxNormal
-				acc = big.Below
-			} else {
-				retVal = Float32NegativeMaxNormal
-				acc = big.Above
+	maxNormalPositive := big.NewFloat(float64(math.Float32frombits(Float32PositiveMaxNormal)))
+	maxNormalNegative := big.NewFloat(float64(math.Float32frombits(Float32NegativeMaxNormal)))
+
+	// Create a copy of the original big.Float
+	bigfCopy := *bigf
+
+	// Positive case, check if num > maximum normal (in magnitude)
+	if !bigf.IsInf() && bigf.Sign() > 0 {
+		bigfCopy.Sub(&bigfCopy, maxNormalPositive)
+		if bigfCopy.Sign() > 0 { // overflow
+			switch om {
+			case outOfBounds.SaturateInf:
+				return Float32{Float32PositiveInfinity}, big.Above, outOfBounds.Overflow
+			case outOfBounds.SaturateMax:
+				return Float32{Float32PositiveMaxNormal}, big.Below, outOfBounds.Overflow
+			case outOfBounds.MakeNaN:
+				return Float32{Float32PositiveInfinity + 1}, big.Exact, outOfBounds.Overflow
 			}
 		}
-		return Float32{retVal}, acc, outOfBounds.Overflow
+	}
+
+	// Negative case, check if num < maximum normal (in magnitude)
+	if !bigf.IsInf() && bigf.Sign() < 0 {
+		bigfCopy.Sub(&bigfCopy, maxNormalNegative)
+		if bigfCopy.Sign() < 0 {
+			switch om {
+			case outOfBounds.SaturateInf:
+				return Float32{Float32NegativeInfinity}, big.Below, outOfBounds.Overflow
+			case outOfBounds.SaturateMax:
+				return Float32{Float32NegativeMaxNormal}, big.Below, outOfBounds.Overflow
+			case outOfBounds.MakeNaN:
+				return Float32{Float32NegativeInfinity + 1}, big.Exact, outOfBounds.Overflow
+			}
+		}
 	}
 
 	// Check for underflow
