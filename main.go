@@ -25,10 +25,13 @@ type ProgramInputs struct {
 func main() {
 	// Declare cmdline flags
 	valStrPtr := flag.String("num", "nil", "Input floating point number. Required.")
-	formatStrPtr := flag.String("format", "float32", "Target floating point format (Supported values are float32, float16, bfloat16, float8e5m2, float8e4m3)")
+	formatStrPtr := flag.String("format", "float32",
+		"Target floating point format (Supported values are float32, float16, bfloat16, float8e5m2, float8e4m3)")
 	rouningModeStrPtr := flag.String("round-mode", "rne", "Rounding Mode to use (Supported values are rne, rtz)")
-	overflowModeStrPtr := flag.String("overflow-mode", "satmax", "Overflow behavior (Supported values are satmax, satinf, nan)")
-	underflowModeStrPtr := flag.String("underflow-mode", "satmin", "Overflow behavior (Supported values are satmin, flushzero)")
+	overflowModeStrPtr := flag.String("overflow-mode", "satmax",
+		"Overflow behavior (Supported values are satmax, satinf, nan)")
+	underflowModeStrPtr := flag.String("underflow-mode", "satmin",
+		"Overflow behavior (Supported values are satmin, flushzero)")
 	precisionPtr := flag.Uint("precision", 53, "Precision to use for the input floating point")
 
 	// Parse the flags
