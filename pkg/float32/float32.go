@@ -63,12 +63,13 @@ func FromBigFloat(bigf *big.Float,
 
 	retVal := FromFloat(asFloat).Val
 
-	// Check for overflow
+	/** Check for overflow start **/
 	maxNormalPositive := big.NewFloat(float64(math.Float32frombits(Float32PositiveMaxNormal)))
 	maxNormalNegative := big.NewFloat(float64(math.Float32frombits(Float32NegativeMaxNormal)))
 
 	// Create a copy of the original big.Float
-	bigfCopy := *bigf
+	bigfCopy := big.Float{}
+	bigfCopy.Copy(bigf)
 
 	// Positive case, check if num > maximum normal (in magnitude)
 	if !bigf.IsInf() && bigf.Sign() > 0 {
@@ -99,8 +100,9 @@ func FromBigFloat(bigf *big.Float,
 			}
 		}
 	}
+	/** Check for overflow end  **/
 
-	// Check for underflow
+	/** Check for underflow start **/
 	// bigf.Sign() == 0 is only true if bigf is zero. So we use it as a equality check here
 	// If big float was non-zero, but rounded value was zero => underflow
 	if (bigf.Sign() != 0) && (retVal == Float32PositiveZero || retVal == Float32NegativeZero) {
@@ -124,6 +126,7 @@ func FromBigFloat(bigf *big.Float,
 		}
 		return Float32{retVal}, acc, outOfBounds.Underflow
 	}
+	/** Check for underflow end **/
 
 	return Float32{retVal}, acc, outOfBounds.Fits
 }
