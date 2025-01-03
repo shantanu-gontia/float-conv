@@ -94,7 +94,7 @@ func FromBigFloat(bigf *big.Float,
 			case outOfBounds.SaturateInf:
 				return Float32{Float32NegativeInfinity}, big.Below, outOfBounds.Overflow
 			case outOfBounds.SaturateMax:
-				return Float32{Float32NegativeMaxNormal}, big.Below, outOfBounds.Overflow
+				return Float32{Float32NegativeMaxNormal}, big.Above, outOfBounds.Overflow
 			case outOfBounds.MakeNaN:
 				return Float32{Float32NegativeInfinity + 1}, big.Exact, outOfBounds.Overflow
 			}

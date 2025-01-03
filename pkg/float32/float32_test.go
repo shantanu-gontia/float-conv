@@ -163,7 +163,7 @@ func TestFromBigFloat(t *testing.T) {
 					t.Logf("Rounding Mode: %v", iopair.ival.r)
 					t.Logf("Overflow Mode: %v", iopair.ival.o)
 					t.Logf("Underflow Mode: %v", iopair.ival.u)
-					t.Errorf("Expected result: %e (%0#8x), Got: %e (%0#8x)", wantVal.ToFloat(), wantVal, resultVal.ToFloat(), resultVal)
+					t.Errorf("Expected result: %.10e (%0#8x), Got: %.10e (%0#8x)", wantVal.ToFloat(), wantVal, resultVal.ToFloat(), resultVal)
 					t.Errorf("Expect accuracy: %v, Got: %v", wantAcc, resultAcc)
 					t.Errorf("Expected status: %v, Got: %v", wantStatus, resultStatus)
 				}
