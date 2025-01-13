@@ -11,15 +11,14 @@ import (
 	floatBit "github.com/shantanu-gontia/float-conv/pkg"
 	BFloat16 "github.com/shantanu-gontia/float-conv/pkg/bfloat16"
 	Float32 "github.com/shantanu-gontia/float-conv/pkg/float32"
-	outOfBounds "github.com/shantanu-gontia/float-conv/pkg/oob"
 )
 
 type ProgramInputs struct {
 	input  big.Float
 	format string
 	rm     floatBit.RoundingMode
-	om     outOfBounds.OverflowMode
-	um     outOfBounds.UnderflowMode
+	om     floatBit.OverflowMode
+	um     floatBit.UnderflowMode
 }
 
 func main() {
@@ -80,7 +79,7 @@ func main() {
 }
 
 // Call the appropriate functions and methods required to put together the information to print for FP32
-func handleFloat32(bf *big.Float, rm floatBit.RoundingMode, om outOfBounds.OverflowMode, um outOfBounds.UnderflowMode) {
+func handleFloat32(bf *big.Float, rm floatBit.RoundingMode, om floatBit.OverflowMode, um floatBit.UnderflowMode) {
 	// First we print the type
 	fmt.Println("Float32")
 
@@ -113,13 +112,13 @@ func handleFloat32(bf *big.Float, rm floatBit.RoundingMode, om outOfBounds.Overf
 	// Print the bits in hexadecimal
 	fmt.Printf("Hexadecimal: %0#8x\n", floatVal.Val)
 
-	if status != outOfBounds.Fits {
+	if status != floatBit.Fits {
 		fmt.Printf("%s\n", status.String())
 	}
 }
 
 // Call the appropriate functions and methods required to put together the information to print for BF16
-func handleBFloat16(bf *big.Float, rm floatBit.RoundingMode, om outOfBounds.OverflowMode, um outOfBounds.UnderflowMode) {
+func handleBFloat16(bf *big.Float, rm floatBit.RoundingMode, om floatBit.OverflowMode, um floatBit.UnderflowMode) {
 	// First we print the type
 	fmt.Println("BFloat16")
 
@@ -152,19 +151,19 @@ func handleBFloat16(bf *big.Float, rm floatBit.RoundingMode, om outOfBounds.Over
 	// Print the bits in hexadecimal
 	fmt.Printf("Hexadecimal: %0#4x\n", floatVal.Val)
 
-	if status != outOfBounds.Fits {
+	if status != floatBit.Fits {
 		fmt.Printf("%s\n", status.String())
 	}
 }
 
 // Underflow mode to use
-func parseUnderflowMode(underflowModeStrPtr *string) (outOfBounds.UnderflowMode, error) {
-	var underflowMode outOfBounds.UnderflowMode
+func parseUnderflowMode(underflowModeStrPtr *string) (floatBit.UnderflowMode, error) {
+	var underflowMode floatBit.UnderflowMode
 	switch strings.ToLower(*underflowModeStrPtr) {
 	case "satmin":
-		underflowMode = outOfBounds.SaturateMin
+		underflowMode = floatBit.SaturateMin
 	case "flushzero":
-		underflowMode = outOfBounds.FlushToZero
+		underflowMode = floatBit.FlushToZero
 	default:
 		return underflowMode, errors.New("Unsupported UnderflowMode " + *underflowModeStrPtr)
 	}
@@ -172,15 +171,15 @@ func parseUnderflowMode(underflowModeStrPtr *string) (outOfBounds.UnderflowMode,
 }
 
 // Overflow mode to use
-func parseOverflowMode(overflowModeStrPtr *string) (outOfBounds.OverflowMode, error) {
-	var overflowMode outOfBounds.OverflowMode
+func parseOverflowMode(overflowModeStrPtr *string) (floatBit.OverflowMode, error) {
+	var overflowMode floatBit.OverflowMode
 	switch strings.ToLower(*overflowModeStrPtr) {
 	case "nan":
-		overflowMode = outOfBounds.MakeNaN
+		overflowMode = floatBit.MakeNaN
 	case "satmax":
-		overflowMode = outOfBounds.SaturateMax
+		overflowMode = floatBit.SaturateMax
 	case "satinf":
-		overflowMode = outOfBounds.SaturateInf
+		overflowMode = floatBit.SaturateInf
 	default:
 		return overflowMode, errors.New("Unsupported overflow mode " + *overflowModeStrPtr)
 	}
