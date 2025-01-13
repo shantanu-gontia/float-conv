@@ -9,44 +9,20 @@ import "math/big"
 type RoundingMode byte
 
 const (
-	// Round towards zero is equivalent to truncation
-	RTZ              RoundingMode = 0
 	RoundTowardsZero RoundingMode = 0
 
-	// Rounding down means choosing the number closer to negative infinity
-	RoundDown               RoundingMode = 1
 	RoundTowardsNegativeInf RoundingMode = 1
 
-	// Rounding up means choosing the number closer to positive infinity
-	RoundUp                 RoundingMode = 2
 	RoundTowardsPositiveInf RoundingMode = 2
 
-	// Round half towards zero means rounding to the nearest representable, and
-	// breaking ties, by rounding towards zero
 	RoundHalfTowardsZero RoundingMode = 3
 
-	// Rounding half down means rounding to the nearest, and breaking ties
-	// by rounding towards negative infinity
-	RoundHalfDown               RoundingMode = 4
 	RoundHalfTowardsNegativeInf RoundingMode = 4
 
-	// Rounding half up means rounding to the nearest, and breaking ties
-	// by rounding towards positive infinity
-	RoundHalfUp                 RoundingMode = 5
 	RoundHalfTowardsPositiveInf RoundingMode = 5
 
-	// Round Nearest Even breaks ties by choosing the number which is even.
-	// For rounding to non-integers, this means the least significant
-	// digit (in whichever radix) after rounding must be even
-	// This is the "round half to even" in https://en.wikipedia.org/wiki/Rounding
-	RNE              RoundingMode = 6
 	RoundNearestEven RoundingMode = 6
 
-	// Round Nearest Even breaks ties by choosing the number which is even.
-	// For rounding to non-integers, this means the least significant
-	// digit (in whichever radix) after rounding must be odd
-	// This is the "round half to odd" in https://en.wikipedia.org/wiki/Rounding
-	RNO             RoundingMode = 7
 	RoundNearestOdd RoundingMode = 7
 )
 
