@@ -77,6 +77,7 @@ func FromBigFloat(input big.Float, rm floatBit.RoundingMode,
 	if fromBigFloatAcc == big.Exact {
 		return resultBits, resultAcc, resultStatus
 	}
+
 	return resultBits, fromBigFloatAcc, resultStatus
 }
 
@@ -122,7 +123,7 @@ func FromFloat64(input float64, rm floatBit.RoundingMode,
 		return Bits(0x0000_0000), big.Exact, floatBit.Fits
 	}
 
-	// With the bits interpreted as uint64, we can now extract the underlying
+	// With the number interpreted as uint64, we can now extract the underlying
 	// sign, exponent and mantissa bits.
 	signBit := (asUint64 & f64SignBitMask) >> 63
 	exponentBits := (asUint64 & f64ExponentBitsMask) >> 52
@@ -172,6 +173,7 @@ func FromFloat64(input float64, rm floatBit.RoundingMode,
 	// the cases where we truncate, because we might underflow and we need
 	// to report that.
 	if actualExponent < ExponentMin {
+
 		// We start with the assumption that the number can be represented by
 		// a subnormal number in float32. Since, subnormal numbers do not have
 		// an implicit 1.0 addition (or an extra implicit precision bit,
@@ -228,29 +230,29 @@ func FromFloat64(input float64, rm floatBit.RoundingMode,
 	// a normal number.
 	switch rm {
 	case floatBit.RoundTowardsZero:
-		// Exponent is zero for subnormals
 		resultVal, resultAcc = roundTowardsZero(signBit,
 			adjustedExponent, alignedMantissa)
 	case floatBit.RoundTowardsNegativeInf:
 		resultVal, resultAcc = roundTowardsNegativeInf(signBit,
-			adjustedExponent, mantissaBits)
+			adjustedExponent, alignedMantissa)
 	case floatBit.RoundTowardsPositiveInf:
 		resultVal, resultAcc = roundTowardsPositiveInf(signBit,
-			adjustedExponent, mantissaBits)
+			adjustedExponent, alignedMantissa)
 	case floatBit.RoundHalfTowardsZero:
-		resultVal, resultAcc = roundHalfTowardsZero(signBit,
-			adjustedExponent, mantissaBits)
+		resultVal, resultAcc = roundHalfTowardsZero(signBit, adjustedExponent,
+			alignedMantissa)
 	case floatBit.RoundHalfTowardsNegativeInf:
 		resultVal, resultAcc = roundHalfTowardsNegativeInf(signBit,
-			exponentBits, mantissaBits)
+			adjustedExponent, alignedMantissa)
 	case floatBit.RoundHalfTowardsPositiveInf:
 		resultVal, resultAcc = roundHalfTowardsPositiveInf(signBit,
-			exponentBits, mantissaBits)
+			adjustedExponent, alignedMantissa)
 	case floatBit.RoundNearestEven:
-		resultVal, resultAcc = roundNearestEven(signBit,
-			exponentBits, mantissaBits)
+		resultVal, resultAcc = roundNearestEven(signBit, adjustedExponent,
+			alignedMantissa)
 	case floatBit.RoundNearestOdd:
-		// TODO: Implement Me
+		resultVal, resultAcc = roundNearestOdd(signBit, adjustedExponent,
+			alignedMantissa)
 	}
 
 	return resultVal, resultAcc, floatBit.Fits
