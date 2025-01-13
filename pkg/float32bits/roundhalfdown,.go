@@ -1,0 +1,54 @@
+package F32
+
+import "math/big"
+
+// Utility function that returns the number rounded to the closest float32
+// value. Ties are broken by rounding to the value closest to zero (truncation)
+// signBit, and exponentBits must be passed with their values shifted all the
+// way to the right.
+// exponentBits must be passed with the float32 bias applied
+// mantissaBits must be passed in their float64 locations.
+// NOTE: This doesn't handle the underflow and overflow cases.
+func roundHalfTowardsNegativeInf(signBit, exponentBits,
+	mantissaBits uint64) (Bits, big.Accuracy) {
+
+	mantissaF32Precision := mantissaBits & f64float32MantissaMask
+	mantissaExtraPrecision := mantissaBits & f64float32HalfSubnormalMask
+
+	float32Sign := uint32(signBit << 31)
+	float32Exponent := uint32(exponentBits << 23)
+	float32Mantissa := uint32(mantissaF32Precision >> 29)
+
+	exponentMantissaComposite := float32Exponent | float32Mantissa
+
+	addedOne := false
+	// We definitely add 1, if we're greater than the mid-point
+	if mantissaExtraPrecision > f64float32HalfSubnormalLSB {
+		exponentMantissaComposite += 1
+		addedOne = true
+	}
+
+	// In the case that we're halfway through,
+	// We add 1, only if the sign was negative, otherwise we truncate
+	if (mantissaExtraPrecision ==
+		f64float32HalfSubnormalLSB) && (float32Sign != 0) {
+		exponentMantissaComposite += 1
+		addedOne = true
+	}
+
+	// For all other case we truncate, so now we can construct the result
+	// by attaching the sign
+	resultVal := Bits(float32Sign | exponentMantissaComposite)
+	resultAcc := big.Exact
+
+	// Result is larger if the input was positive and we added 1, or
+	// if the input was negative and we truncated.
+	if mantissaExtraPrecision != 0 {
+		resultAcc = big.Below
+		if (float32Sign == 0) == addedOne {
+			resultAcc = big.Above
+		}
+	}
+
+	return resultVal, resultAcc
+}
