@@ -9,7 +9,7 @@ converted number, conversion error etc.
 ## Usage
 
 ```bash
-float-conv <number> [-f=<format>] [-t=<as_table>] [-p=<precision>]
+float-conv [-num=<number> ][-f=<format>] [-t=<as_table>] [-p=<precision>]
 ```
 
 * The first and only positional argument is the input number. The number can be input as either decimal, scientific or
@@ -21,10 +21,10 @@ in hexfloat formats.
 ## Example
 
 ```bash
-$ float-conv 0.125 -f=float32
+$ float-conv -num=0.125 -f=float32
 Sign: 0, Exponent: 00111110, Mantissa: 00000000000000000000000
 
-$ float-conv 0.125 -f=float32 -t=true
+$ float-conv -num=0.125 -f=float32 -t=true
 |Sign|Exponent|               Mantissa|
 |   0|00111110|00000000000000000000000|
 ```
