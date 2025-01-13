@@ -9,8 +9,7 @@ import (
 	"strings"
 
 	floatBit "github.com/shantanu-gontia/float-conv/pkg"
-	BFloat16 "github.com/shantanu-gontia/float-conv/pkg/bfloat16"
-	Float32 "github.com/shantanu-gontia/float-conv/pkg/float32"
+	F32 "github.com/shantanu-gontia/float-conv/pkg/float32bits"
 )
 
 type ProgramInputs struct {
@@ -25,8 +24,9 @@ func main() {
 	// Declare cmdline flags
 	valStrPtr := flag.String("num", "nil", "Input floating point number. Required.")
 	formatStrPtr := flag.String("format", "float32",
-		"Target floating point format (Supported values are float32, float16, bfloat16, float8e5m2, float8e4m3)")
-	rouningModeStrPtr := flag.String("round-mode", "rne", "Rounding Mode to use (Supported values are rne, rtz)")
+		"Target floating point format (Supported values are float32)")
+	rouningModeStrPtr := flag.String("round-mode", "rne", "Rounding Mode to use (Supported values are rne, "+
+		"rno, rtz, rtposinf, rtneginf, rthalfzero, rthalfposinf, rthalfneginf)")
 	overflowModeStrPtr := flag.String("overflow-mode", "satmax",
 		"Overflow behavior (Supported values are satmax, satinf, nan)")
 	underflowModeStrPtr := flag.String("underflow-mode", "satmin",
@@ -70,10 +70,6 @@ func main() {
 		fallthrough
 	case "fp32":
 		handleFloat32(val, roundingMode, overflowMode, underflowMode)
-	case "bfloat16":
-		fallthrough
-	case "bf16":
-		handleBFloat16(val, roundingMode, overflowMode, underflowMode)
 	}
 
 }
@@ -84,7 +80,7 @@ func handleFloat32(bf *big.Float, rm floatBit.RoundingMode, om floatBit.Overflow
 	fmt.Println("Float32")
 
 	// Get the Float32 Value
-	floatVal, _, status := Float32.FromBigFloat(bf, rm, om, um)
+	floatVal, _, status := F32.FromBigFloat(*bf, rm, om, um)
 
 	// Print the bits in a table
 	fmt.Print(floatVal.ToFloatFormat().AsTable())
@@ -94,7 +90,7 @@ func handleFloat32(bf *big.Float, rm floatBit.RoundingMode, om floatBit.Overflow
 	fmt.Printf("Decimal: %s\n", asBigFloat.String())
 
 	// Print the hexfloat value
-	fmt.Printf("Hexfloat: %x\n", floatVal.ToFloat())
+	fmt.Printf("Hexfloat: %x\n", floatVal.ToFloat32())
 
 	// Print the conversion error
 	conv, err := floatVal.ConversionError(bf)
@@ -107,10 +103,10 @@ func handleFloat32(bf *big.Float, rm floatBit.RoundingMode, om floatBit.Overflow
 	fmt.Printf("Conversion Error: %s\n", convStr)
 
 	// Print the bits in binary
-	fmt.Printf("Binary: %0#32b\n", floatVal.Val)
+	fmt.Printf("Binary: %0#32b\n", floatVal)
 
 	// Print the bits in hexadecimal
-	fmt.Printf("Hexadecimal: %0#8x\n", floatVal.Val)
+	fmt.Printf("Hexadecimal: %0#8x\n", floatVal)
 
 	if status != floatBit.Fits {
 		fmt.Printf("%s\n", status.String())
@@ -118,43 +114,43 @@ func handleFloat32(bf *big.Float, rm floatBit.RoundingMode, om floatBit.Overflow
 }
 
 // Call the appropriate functions and methods required to put together the information to print for BF16
-func handleBFloat16(bf *big.Float, rm floatBit.RoundingMode, om floatBit.OverflowMode, um floatBit.UnderflowMode) {
-	// First we print the type
-	fmt.Println("BFloat16")
+// func handleBFloat16(bf *big.Float, rm floatBit.RoundingMode, om floatBit.OverflowMode, um floatBit.UnderflowMode) {
+// 	// First we print the type
+// 	fmt.Println("BFloat16")
 
-	// Get the Float32 Value
-	floatVal, _, status := BFloat16.FromBigFloat(bf, rm, om, um)
+// 	// Get the Float32 Value
+// 	floatVal, _, status := BFloat16.FromBigFloat(bf, rm, om, um)
 
-	// Print the bits in a table
-	fmt.Print(floatVal.ToFloatFormat().AsTable())
+// 	// Print the bits in a table
+// 	fmt.Print(floatVal.ToFloatFormat().AsTable())
 
-	// Print the decimal value
-	asBigFloat := floatVal.ToBigFloat()
-	fmt.Printf("Decimal: %s\n", asBigFloat.String())
+// 	// Print the decimal value
+// 	asBigFloat := floatVal.ToBigFloat()
+// 	fmt.Printf("Decimal: %s\n", asBigFloat.String())
 
-	// Print the hexfloat value
-	fmt.Printf("Hexfloat: %x\n", floatVal.ToFloat())
+// 	// Print the hexfloat value
+// 	fmt.Printf("Hexfloat: %x\n", floatVal.ToFloat())
 
-	// Print the conversion error
-	conv, err := floatVal.ConversionError(bf)
-	var convStr string
-	if err == nil {
-		convStr = conv.String()
-	} else {
-		convStr = "NaN"
-	}
-	fmt.Printf("Conversion Error: %s\n", convStr)
+// 	// Print the conversion error
+// 	conv, err := floatVal.ConversionError(bf)
+// 	var convStr string
+// 	if err == nil {
+// 		convStr = conv.String()
+// 	} else {
+// 		convStr = "NaN"
+// 	}
+// 	fmt.Printf("Conversion Error: %s\n", convStr)
 
-	// Print the bits in binary
-	fmt.Printf("Binary: %0#16b\n", floatVal.Val)
+// 	// Print the bits in binary
+// 	fmt.Printf("Binary: %0#16b\n", floatVal.Val)
 
-	// Print the bits in hexadecimal
-	fmt.Printf("Hexadecimal: %0#4x\n", floatVal.Val)
+// 	// Print the bits in hexadecimal
+// 	fmt.Printf("Hexadecimal: %0#4x\n", floatVal.Val)
 
-	if status != floatBit.Fits {
-		fmt.Printf("%s\n", status.String())
-	}
-}
+// 	if status != floatBit.Fits {
+// 		fmt.Printf("%s\n", status.String())
+// 	}
+// }
 
 // Underflow mode to use
 func parseUnderflowMode(underflowModeStrPtr *string) (floatBit.UnderflowMode, error) {
@@ -191,11 +187,21 @@ func parseRoundingMode(roundingModeStrPtr *string) (floatBit.RoundingMode, error
 	var roundMode floatBit.RoundingMode
 	switch strings.ToLower(*roundingModeStrPtr) {
 	case "rne":
-		roundMode = floatBit.RNE
+		roundMode = floatBit.RoundNearestEven
+	case "rno":
+		roundMode = floatBit.RoundNearestOdd
 	case "rtz":
-		fallthrough
-	case "trunc":
-		roundMode = floatBit.RTZ
+		roundMode = floatBit.RoundTowardsZero
+	case "rtposinf":
+		roundMode = floatBit.RoundTowardsPositiveInf
+	case "rtneginf":
+		roundMode = floatBit.RoundTowardsNegativeInf
+	case "rthalfzero":
+		roundMode = floatBit.RoundHalfTowardsZero
+	case "rthalfposinf":
+		roundMode = floatBit.RoundHalfTowardsPositiveInf
+	case "rthalfneginf":
+		roundMode = floatBit.RoundHalfTowardsNegativeInf
 	default:
 		return roundMode, errors.New("Unsupported rounding mode " + *roundingModeStrPtr)
 	}
