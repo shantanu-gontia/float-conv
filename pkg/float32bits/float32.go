@@ -1,6 +1,7 @@
 package F32
 
 import (
+	"errors"
 	"math"
 	"math/big"
 
@@ -343,4 +344,68 @@ func handleOverflow(signBit uint64, om floatBit.OverflowMode) (Bits,
 	default:
 		panic("Unsupported OverflowMode encountered")
 	}
+}
+
+// ToFloatFormat converts the given Bits type representing the bits that make
+// up a float32 number into [floatBit.FloatBitFormat]
+// Implements the FloatBitFormatter Interface
+func (b *Bits) ToFloatFormat() floatBit.FloatBitFormat {
+	// Iterate over the bits and construct the return Values
+
+	asUint := uint32(*b)
+	signBits := (asUint & SignMask) >> 31
+	exponentBits := (asUint & ExponentMask) >> 23
+	mantissaBits := asUint & MantissaMask
+
+	// 1 Sign Bit
+	signRetVal := make([]byte, 0, 1)
+	if signBits == 0 {
+		signRetVal = append(signRetVal, byte('0'))
+	} else {
+		signRetVal = append(signRetVal, byte('1'))
+	}
+
+	// 8 Exponent Bits
+	exponentRetVal := make([]byte, 0, 8)
+	for i := 0; i < 8; i++ {
+		currentExponentBit := exponentBits & 0x1
+		var valueToAppend byte
+		if currentExponentBit == 0 {
+			valueToAppend = '0'
+		} else {
+			valueToAppend = '1'
+		}
+		exponentRetVal = append(exponentRetVal, valueToAppend)
+		exponentBits >>= 1
+	}
+
+	// 23 Mantissa Bits
+	mantissaRetVal := make([]byte, 0, 23)
+	for i := 0; i < 23; i++ {
+		currentMantissaBit := mantissaBits & 0x1
+		var valueToAppend byte
+		if currentMantissaBit == 0 {
+			valueToAppend = '0'
+		} else {
+			valueToAppend = '1'
+		}
+		mantissaRetVal = append(mantissaRetVal, valueToAppend)
+		mantissaBits >>= 1
+	}
+
+	return floatBit.FloatBitFormat{Sign: signRetVal, Exponent: exponentRetVal, Mantissa: mantissaRetVal}
+}
+
+// Conversion error returns the difference between the input [big.Float]
+// number and the float32 number represented by the bits in the [Bits] receiver
+func (b *Bits) ConversionError(input *big.Float) (big.Float, error) {
+	// If the receiver is a NaN then we return an error
+	asFloat32 := b.ToFloat32()
+	if math.IsNaN(float64(asFloat32)) {
+		return *big.NewFloat(0.0), errors.New("NaN encountered")
+	}
+
+	asBigFloat := b.ToBigFloat()
+	convDiff := asBigFloat.Sub(&asBigFloat, input)
+	return *convDiff, nil
 }
