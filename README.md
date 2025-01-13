@@ -32,7 +32,7 @@ $ float-conv -num=0.125 -f=float32 -t=true
 ## Roadmap
 
 * Add proper argument parsing support
-* Add CLI arguments that allow outputting specific formatting (like just the binary representation or just the 
+* Add CLI arguments that allow outputting specific formatting (like just the binary representation or just the
 hexadecimal representation), so this can be used for piping to other commands.
 * Add support for OCP Microscaling 8-bit Formats
 * When converting input string to floating-point formats, allow specification of the rounding modes. Currently, the plan
