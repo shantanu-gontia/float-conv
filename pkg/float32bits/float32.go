@@ -51,7 +51,8 @@ func (input Bits) ToFloat32() float32 {
 // Convert the given [Bits] type to a [big.Float] arbitrary precision
 // floating-point number
 func (input Bits) ToBigFloat() big.Float {
-	return *big.NewFloat(float64(input.ToFloat32()))
+	asBigFloat := *big.NewFloat(float64(input.ToFloat32()))
+	return asBigFloat
 }
 
 // Convert the given [big.Float] arbitrary precision floating-point number
@@ -403,6 +404,16 @@ func (b *Bits) ConversionError(input *big.Float) (big.Float, error) {
 	asFloat32 := b.ToFloat32()
 	if math.IsNaN(float64(asFloat32)) {
 		return *big.NewFloat(0.0), errors.New("NaN encountered")
+	}
+
+	// Positive Infinity == Positive Infinity
+	if math.IsInf(float64(asFloat32), 1) && (input.IsInf() && (input.Sign() > 0)) {
+		return *big.NewFloat(0), nil
+	}
+
+	// Negative Infinity == Negative Infinity
+	if math.IsInf(float64(asFloat32), -1) && (input.IsInf() && (input.Sign() < 0)) {
+		return *big.NewFloat(0), nil
 	}
 
 	asBigFloat := b.ToBigFloat()
