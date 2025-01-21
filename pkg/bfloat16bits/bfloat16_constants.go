@@ -31,3 +31,7 @@ const (
 	ExponentMin  int = -126
 	ExponentMax  int = 127
 )
+
+const (
+	f32BF16HalfSubnormalLSB uint32 = 0x0000_8000
+)

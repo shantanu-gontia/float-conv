@@ -339,9 +339,9 @@ func TestRoundTowardsNegativeInf(t *testing.T) {
 
 func TestRoundHalfTowardsZero(t *testing.T) {
 
-	// Rounding half towards positive infinity involves rounding to the nearest
+	// Rounding half towards zero involves rounding to the nearest
 	// representable number, and breaking ties by rounding towards the
-	// number closer to +inf
+	// number closer to 0
 
 	testCases := []struct {
 		// Inputs
