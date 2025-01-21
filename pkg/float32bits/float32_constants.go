@@ -8,8 +8,8 @@ const (
 	PositiveInfinity uint32 = 0x7f80_0000
 	NegativeInfinity uint32 = 0xff80_0000
 
-	NegativeZero uint32 = 0x8000_0000
 	PositiveZero uint32 = 0x0000_0000
+	NegativeZero uint32 = 0x8000_0000
 
 	PositiveMaxNormal uint32 = 0x7f7fffff
 	NegativeMaxNormal uint32 = 0xff7fffff

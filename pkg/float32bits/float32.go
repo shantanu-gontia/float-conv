@@ -80,6 +80,18 @@ func FromBigFloat(input big.Float, rm floatBit.RoundingMode,
 		return resultBits, resultAcc, resultStatus
 	}
 
+	// There is underflow if the resulting float was 0 but the input wasn't
+	if input.Sign() != 0 && (math.Float64bits(asFloat64) ==
+		0x8000_0000_0000_0000 || math.Float64bits(asFloat64) ==
+		0x0) {
+		resultStatus = floatBit.Underflow
+	}
+
+	// There is overflow if the resulting float was +/- inf but the input wasn't
+	if !input.IsInf() && math.IsInf(asFloat64, 0) {
+		resultStatus = floatBit.Overflow
+	}
+
 	return resultBits, fromBigFloatAcc, resultStatus
 }
 
@@ -207,7 +219,7 @@ func FromFloat64(input float64, rm floatBit.RoundingMode,
 		// power. This is equivalent to a right-shfit by 2 = (-126 - (-128))
 		//
 		// In general, by following the pattern, this shift amount is equal
-		// to the difference between the minimum representable exponent
+		// to the difference between the minimum representable exponent (actual)
 		// and the actual value of the exponent in float64.
 		alignedMantissa >>= uint64(ExponentMin - actualExponent)
 
@@ -394,7 +406,8 @@ func (b *Bits) ToFloatFormat() floatBit.FloatBitFormat {
 		mantissaBits >>= 1
 	}
 
-	return floatBit.FloatBitFormat{Sign: signRetVal, Exponent: exponentRetVal, Mantissa: mantissaRetVal}
+	return floatBit.FloatBitFormat{Sign: signRetVal,
+		Exponent: exponentRetVal, Mantissa: mantissaRetVal}
 }
 
 // Conversion error returns the difference between the input [big.Float]
@@ -407,12 +420,14 @@ func (b *Bits) ConversionError(input *big.Float) (big.Float, error) {
 	}
 
 	// Positive Infinity == Positive Infinity
-	if math.IsInf(float64(asFloat32), 1) && (input.IsInf() && (input.Sign() > 0)) {
+	if math.IsInf(float64(asFloat32), 1) &&
+		(input.IsInf() && (input.Sign() > 0)) {
 		return *big.NewFloat(0), nil
 	}
 
 	// Negative Infinity == Negative Infinity
-	if math.IsInf(float64(asFloat32), -1) && (input.IsInf() && (input.Sign() < 0)) {
+	if math.IsInf(float64(asFloat32), -1) &&
+		(input.IsInf() && (input.Sign() < 0)) {
 		return *big.NewFloat(0), nil
 	}
 
