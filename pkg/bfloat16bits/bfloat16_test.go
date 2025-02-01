@@ -1,10 +1,12 @@
 package BF16
 
 import (
+	"math"
 	"math/big"
 	"testing"
 
 	floatBit "github.com/shantanu-gontia/float-conv/pkg"
+	F32 "github.com/shantanu-gontia/float-conv/pkg/float32bits"
 )
 
 func TestHandleOverflow(t *testing.T) {
@@ -135,9 +137,9 @@ func TestRoundTowardsNegativeInf(t *testing.T) {
 
 	testCases := []struct {
 		// Inputs
-		signBit      uint64
-		exponentBits uint64
-		mantissaBits uint64
+		signBit      uint32
+		exponentBits uint32
+		mantissaBits uint32
 		// Outputs
 		goldenVal Bits
 		goldenAcc big.Accuracy
@@ -204,9 +206,9 @@ func TestRoundTowardsPositiveInf(t *testing.T) {
 
 	testCases := []struct {
 		// Inputs
-		signBit      uint64
-		exponentBits uint64
-		mantissaBits uint64
+		signBit      uint32
+		exponentBits uint32
+		mantissaBits uint32
 		// Outputs
 		goldenVal Bits
 		goldenAcc big.Accuracy
@@ -1054,5 +1056,246 @@ func TestRoundNearestOdd(t *testing.T) {
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 			}
 		})
+	}
+}
+
+func TestFromBigFloat(t *testing.T) {
+	testCases := []struct {
+		name string
+		// Inputs
+		input big.Float
+		rm    floatBit.RoundingMode
+		um    floatBit.UnderflowMode
+		om    floatBit.OverflowMode
+		// Outputs
+		goldenVal    Bits
+		goldenAcc    big.Accuracy
+		goldenStatus floatBit.Status
+	}{
+		{
+			name:         "PosInfInput",
+			input:        *big.NewFloat(math.Inf(1)),
+			rm:           floatBit.RoundNearestEven,
+			um:           floatBit.SaturateMin,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(PositiveInfinity),
+			goldenAcc:    big.Exact,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "NegInfInput",
+			input:        *big.NewFloat(math.Inf(-1)),
+			rm:           floatBit.RoundHalfTowardsPositiveInf,
+			um:           floatBit.SaturateMin,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(NegativeInfinity),
+			goldenAcc:    big.Exact,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "PosZeroInput",
+			input:        *big.NewFloat(0.0),
+			rm:           floatBit.RoundHalfTowardsNegativeInf,
+			um:           floatBit.SaturateMin,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(PositiveZero),
+			goldenAcc:    big.Exact,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "NegZeroInput",
+			input:        *big.NewFloat(float64(math.Float32frombits(F32.NegativeZero))),
+			rm:           floatBit.RoundHalfTowardsNegativeInf,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateInf,
+			goldenVal:    Bits(NegativeZero),
+			goldenAcc:    big.Exact,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "NormalNumberRTZ",
+			input:        *big.NewFloat(1.2323),
+			rm:           floatBit.RoundTowardsZero,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateInf,
+			goldenVal:    Bits(0x3f9d),
+			goldenAcc:    big.Below,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "NormalNumberRTPosInf",
+			input:        *big.NewFloat(1.2323),
+			rm:           floatBit.RoundTowardsPositiveInf,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateInf,
+			goldenVal:    Bits(0x3f9e),
+			goldenAcc:    big.Above,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "NormalNumberRTNegInf",
+			input:        *big.NewFloat(1.2323),
+			rm:           floatBit.RoundTowardsNegativeInf,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateInf,
+			goldenVal:    Bits(0x3f9d),
+			goldenAcc:    big.Below,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "PositiveOverflowToInf",
+			input:        *big.NewFloat(3.4028235e38),
+			rm:           floatBit.RoundHalfTowardsPositiveInf,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateInf,
+			goldenVal:    Bits(PositiveInfinity),
+			goldenAcc:    big.Above,
+			goldenStatus: floatBit.Overflow,
+		},
+		{
+			name:         "NegativeOverflowToInf",
+			input:        *big.NewFloat(-3.4028235e38),
+			rm:           floatBit.RoundHalfTowardsPositiveInf,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateInf,
+			goldenVal:    Bits(NegativeInfinity),
+			goldenAcc:    big.Below,
+			goldenStatus: floatBit.Overflow,
+		},
+		{
+			name:         "PositiveOverflowToMax",
+			input:        *big.NewFloat(3.4028235e38),
+			rm:           floatBit.RoundNearestEven,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(PositiveMaxNormal),
+			goldenAcc:    big.Below,
+			goldenStatus: floatBit.Overflow,
+		},
+		{
+			name:         "PositiveOverflowToInf",
+			input:        *big.NewFloat(-3.4028235e38),
+			rm:           floatBit.RoundNearestEven,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(NegativeMaxNormal),
+			goldenAcc:    big.Above,
+			goldenStatus: floatBit.Overflow,
+		},
+		{
+			name:         "SubnormalPositiveSmallestExact",
+			input:        *big.NewFloat(float64(math.Float32frombits(uint32(PositiveMinSubnormal) << 16))),
+			rm:           floatBit.RoundNearestEven,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(PositiveMinSubnormal),
+			goldenAcc:    big.Exact,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "SubnormalPositiveRTZ",
+			input:        *big.NewFloat(7.46972e-40),
+			rm:           floatBit.RoundTowardsZero,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(0x0008),
+			goldenAcc:    big.Below,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "SubnormalNegativeRTZ",
+			input:        *big.NewFloat(-7.46972e-40),
+			rm:           floatBit.RoundTowardsZero,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(0x8008),
+			goldenAcc:    big.Above,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "SubnormalPositiveRoundPosInf",
+			input:        *big.NewFloat(7.46972e-40),
+			rm:           floatBit.RoundTowardsPositiveInf,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(0x0009),
+			goldenAcc:    big.Above,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "SubnormalNegativeRoundPosInf",
+			input:        *big.NewFloat(-7.46972e-40),
+			rm:           floatBit.RoundTowardsPositiveInf,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(0x8008),
+			goldenAcc:    big.Above,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "SubnormalNegativeRoundNegInf",
+			input:        *big.NewFloat(-7.46972e-40),
+			rm:           floatBit.RoundTowardsNegativeInf,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateInf,
+			goldenVal:    Bits(0x8009),
+			goldenAcc:    big.Below,
+			goldenStatus: floatBit.Fits,
+		},
+		{
+			name:         "PositiveUnderflowSatMin",
+			input:        *big.NewFloat(1e-46),
+			rm:           floatBit.RoundHalfTowardsNegativeInf,
+			um:           floatBit.SaturateMin,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(PositiveMinSubnormal),
+			goldenAcc:    big.Above,
+			goldenStatus: floatBit.Underflow,
+		},
+		{
+			name:         "NegativeUnderflowSatMin",
+			input:        *big.NewFloat(-1e-46),
+			rm:           floatBit.RoundNearestEven,
+			um:           floatBit.SaturateMin,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(NegativeMinSubnormal),
+			goldenAcc:    big.Below,
+			goldenStatus: floatBit.Underflow,
+		},
+		{
+			name:         "PositiveUnderflowFlushZero",
+			input:        *big.NewFloat(1e-46),
+			rm:           floatBit.RoundHalfTowardsNegativeInf,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(PositiveZero),
+			goldenAcc:    big.Below,
+			goldenStatus: floatBit.Underflow,
+		},
+		{
+			name:         "NegativeUnderflowFlushZero",
+			input:        *big.NewFloat(-1e-46),
+			rm:           floatBit.RoundNearestEven,
+			um:           floatBit.FlushToZero,
+			om:           floatBit.SaturateMax,
+			goldenVal:    Bits(NegativeZero),
+			goldenAcc:    big.Above,
+			goldenStatus: floatBit.Underflow,
+		},
+	}
+
+	for _, tt := range testCases {
+		resultVal, resultAcc, resultStatus := FromBigFloat(tt.input, tt.rm, tt.om, tt.um)
+		if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) || (resultStatus != tt.goldenStatus) {
+			t.Logf("Failed Input Set:\n")
+			t.Logf("Name: %s", tt.name)
+			t.Logf("Value: %s", tt.input.String())
+			t.Logf("Rounding Mode: %v", tt.rm)
+			t.Logf("Overflow Mode: %v", tt.om)
+			t.Logf("Underflow Mode: %v", tt.um)
+			t.Errorf("Expected result: %.10e (%0#4x), Got: %.10e (%0#4x)", tt.goldenVal.ToFloat32(), tt.goldenVal, resultVal.ToFloat32(), resultVal)
+			t.Errorf("Expect accuracy: %v, Got: %v", tt.goldenAcc, resultAcc)
+			t.Errorf("Expected status: %v, Got: %v", tt.goldenStatus, resultStatus)
+		}
 	}
 }

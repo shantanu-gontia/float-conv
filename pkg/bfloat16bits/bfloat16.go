@@ -54,30 +54,79 @@ func FromBigFloat(input big.Float, rm floatBit.RoundingMode,
 	// number and use our custom conversion functions [FromFloat32] to convert
 	// to [Bits]
 	input.SetMode(big.ToZero)
-	asFloat32, fromBigFloatAcc := input.Float32()
+	closestFloat32, fromBigFloatAcc := input.Float32()
+
+	var asFloat32 float32
+	// Float64() returns the float32 value that is closest to the input.
+	// This might cause it to round up for some cases.
+	// But, we need to get the value with extra precision truncated
+	// Therefore, to get the truncated result, we need to subtract 1 ULP of
+	// precision if the number is positive and the float32 is larger, or
+	// if the number is negative and the float32 is smaller, or alternatively
+	// if the .Float64() returns big.Above as the accuracy, because for
+	// truncation this should always be big.Below
+	// Note that however, we need to exempt, the case where the results
+	// becomes infinity.
+	if math.IsInf(float64(closestFloat32), 1) && fromBigFloatAcc == big.Above {
+		// If input was greater than F32 Maximum Normal, then closestFloat32
+		// would be +inf, and the accuracy returned would be big.Above
+		// F32.PositiveMaxNormal will trigger overflow repsonse in BF16
+		asFloat32 = math.Float32frombits(F32.PositiveMaxNormal)
+		// We set the accuracy to exact, so that the BF16 methods alter them
+		// correctly
+		fromBigFloatAcc = big.Exact
+	} else if math.IsInf(float64(closestFloat32), -1) && fromBigFloatAcc == big.Below {
+		// Similarly,
+		// for -inf case, it will be big.Below.
+		// F32.NegativeMaxNormal will trigger overflow response in BF16
+		asFloat32 = math.Float32frombits(F32.NegativeMaxNormal)
+		fromBigFloatAcc = big.Exact
+	} else if closestFloat32 == 0.0 && fromBigFloatAcc == big.Below {
+		// We also need to do this for the cases, where closestFloat32 is smaller
+		// than the minimum float32 subnormal, again, because we want to handle
+		// the underflow response in the BF16 methods.
+		// F32.PositiveMinSubnormal will trigger underflow response in BF16
+		asFloat32 = math.Float32frombits(F32.PositiveMinSubnormal)
+		fromBigFloatAcc = big.Exact
+	} else if closestFloat32 == -0.0 && fromBigFloatAcc == big.Above {
+		// And for the negative case
+		// F32.NegativeMinSubnormal will trigger underflow response in BF16
+		asFloat32 = math.Float32frombits(F32.NegativeMinSubnormal)
+		fromBigFloatAcc = big.Exact
+	} else if (input.Sign() > 0 && fromBigFloatAcc == big.Above) ||
+		(input.Sign() < 0 && fromBigFloatAcc == big.Below) {
+		// For positive numbers if the accuracy was big.Above, then Float32()
+		// caused rounding away from zero. This is undesirable. To make it
+		// truncation we need to subtract 1 ULP from the number
+		closestFloat32Bits := math.Float32bits(closestFloat32)
+		asFloat32 = math.Float32frombits(closestFloat32Bits - 1)
+		// Since we made it truncation, ther result must now be smaller
+		fromBigFloatAcc = big.Below
+	} else {
+		asFloat32 = closestFloat32
+	}
+
 	resultBits, resultAcc, resultStatus := FromFloat32(asFloat32, rm, om, um)
 
 	// If conversion to float32 itself wasn't exact, then we use that as the
 	// status, otherwise we use the status from the float32 -> bfloat16
 	// conversion
-	if fromBigFloatAcc == big.Exact {
-		return resultBits, resultAcc, resultStatus
-	}
+	return resultBits, resultAcc, resultStatus
 
-	// There is underflow if the resulting float32 was 0, but the input wasn't
-	if input.Sign() != 0 &&
-		(math.Float32bits(asFloat32) == 0x8000_0000 ||
-			math.Float32bits(asFloat32) == 0x0) {
-		resultStatus = floatBit.Underflow
-	}
+	// // There is underflow if the resulting float32 was 0, but the input wasn't
+	// if input.Sign() != 0 &&
+	// 	(math.Float32bits(asFloat32) == 0x8000_0000 ||
+	// 		math.Float32bits(asFloat32) == 0x0) {
+	// 	resultStatus = floatBit.Underflow
+	// }
 
-	// There is overflow if the resulting float32 was +/- inf but the input
-	// wasn't
-	if !input.IsInf() && math.IsInf(float64(asFloat32), 0) {
-		resultStatus = floatBit.Overflow
-	}
+	// // There is overflow if the resulting float32 was +/- inf but the input
+	// // wasn't
+	// if !input.IsInf() && math.IsInf(float64(asFloat32), 0) {
+	// 	resultStatus = floatBit.Overflow
+	// }
 
-	return resultBits, fromBigFloatAcc, resultStatus
+	// return resultBits, fromBigFloatAcc, resultStatus
 }
 
 // Convert the given [float64] number to a [Bits] type which represents the bits
