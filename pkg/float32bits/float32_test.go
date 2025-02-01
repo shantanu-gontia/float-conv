@@ -110,33 +110,59 @@ func TestCheckOverflow(t *testing.T) {
 func TestCheckUnderflow(t *testing.T) {
 	testCases := []struct {
 		// Inputs
-		mantissaBits uint64
+		mantissaBits  uint64
+		lostPrecision bool
 		// Outputs
 		golden bool
 	}{
 		{
-			mantissaBits: 0b0_00000000000_00000000000000000000000_01000000000000000000000000001,
-			golden:       true,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_01000000000000000000000000001,
+			lostPrecision: false,
+			golden:        true,
 		},
 		{
-			mantissaBits: 0b0_00000000000_00000000000000000000001_00000000000000000000000000001,
-			golden:       false,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_00000000000000000000000000001,
+			lostPrecision: false,
+			golden:        false,
 		},
 		{
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
-			golden:       false,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			golden:        false,
 		},
 		{
-			mantissaBits: 0b0_00000000000_00000000000000000000011_00000000000000000000000000000,
-			golden:       false,
+			mantissaBits:  0b0_00000000000_00000000000000000000011_00000000000000000000000000000,
+			lostPrecision: false,
+			golden:        false,
+		},
+		{
+			mantissaBits:  0b0_00000000000_00000000000000000000000_01000000000000000000000000001,
+			lostPrecision: true,
+			golden:        true,
+		},
+		{
+			mantissaBits:  0b0_00000000000_00000000000000000000001_00000000000000000000000000001,
+			lostPrecision: true,
+			golden:        false,
+		},
+		{
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
+			lostPrecision: true,
+			golden:        true,
+		},
+		{
+			mantissaBits:  0b0_00000000000_00000000000000000000011_00000000000000000000000000000,
+			lostPrecision: true,
+			golden:        false,
 		},
 	}
 
 	for _, tt := range testCases {
-		result := checkUnderflow(tt.mantissaBits)
+		result := checkUnderflow(tt.mantissaBits, tt.lostPrecision)
 		if result != tt.golden {
 			t.Logf("Failed Input Set:\n")
 			t.Logf("Mantissa Bits: %0#16x", tt.mantissaBits)
+			t.Logf("Lost Precision?: %v", tt.lostPrecision)
 			t.Errorf("Expected: %v, Got: %v", tt.golden, result)
 		}
 	}

@@ -65,11 +65,13 @@ func (input Bits) ToBigFloat() big.Float {
 func FromBigFloat(input big.Float, rm floatBit.RoundingMode,
 	om floatBit.OverflowMode, um floatBit.UnderflowMode) (Bits,
 	big.Accuracy, floatBit.Status) {
-	// Since the [big] package's methods do not support rounding modes for
+
+	// Since the [big] package's methods do not support all rounding modes for
 	// direct conversion to float32. We convert to an intermediate float64
 	// number and use our custom conversion function [Fromfloat64] to convert
 	// to [Bits]
 
+	input.SetMode(big.ToZero)
 	asFloat64, fromBigFloatAcc := input.Float64()
 	resultBits, resultAcc, resultStatus := FromFloat64(asFloat64, rm, om, um)
 
@@ -205,6 +207,10 @@ func FromFloat64(input float64, rm floatBit.RoundingMode,
 		// exponent bits to 0
 		adjustedExponent = 0
 
+		// For accurately determining underflow, we also need to check
+		// if we shifted any 1s to the right
+		lostPrecision := false
+
 		// Now, to align the bits of the original format, with the mantissa
 		// of the destination format as a subnormal, we have to shift right
 		// until this implicit 1 addition, falls to the mantissa bit,
@@ -221,7 +227,14 @@ func FromFloat64(input float64, rm floatBit.RoundingMode,
 		// In general, by following the pattern, this shift amount is equal
 		// to the difference between the minimum representable exponent (actual)
 		// and the actual value of the exponent in float64.
-		alignedMantissa >>= uint64(ExponentMin - actualExponent)
+		shiftAmount := uint64(ExponentMin - actualExponent)
+		for ; shiftAmount > 0; shiftAmount-- {
+			lastDigit := alignedMantissa & 0x1
+			if lastDigit == 1 {
+				lostPrecision = true
+			}
+			alignedMantissa >>= 1
+		}
 
 		// Now that we have the value for the mantissa, we can determine
 		// the underflow case. There is underflow, in the case when the
@@ -230,7 +243,7 @@ func FromFloat64(input float64, rm floatBit.RoundingMode,
 		// atleast 1 bit set i.e. all of the precision in the number is higher
 		// than that could be represented in float32. In this case, the response
 		// is handled by the input um [floatBit.UnderflowMode]
-		if checkUnderflow(alignedMantissa) {
+		if checkUnderflow(alignedMantissa, lostPrecision) {
 			return handleUnderflow(signBit, um)
 		}
 
@@ -297,12 +310,16 @@ func checkOverflow(actualExponent int, mantissaBits uint64) bool {
 
 // Utility function to check if the number with the given exponent and mantissa
 // bits would overflow when trying to represent it in a float32 value
-func checkUnderflow(mantissaBits uint64) bool {
+// Subnormals require shifting the mantissa to align the exponents. This might
+// cause loss of precision that cannot be detected by mantissaBits alone as
+// they are already shifted. The lostPrecision parameter helps us with that.
+// If it's true then there was precision lost when mantissa was being aligned
+func checkUnderflow(mantissaBits uint64, lostPrecision bool) bool {
 	// This assumes that the exponent is 0, so any extra precision in the
 	// mantissa means underflow.
 	f32PrecisionMantissa := mantissaBits & f64float32MantissaMask
 	f32ExtraPrecisionMantissa := mantissaBits & f64float32HalfSubnormalMask
-	if (f32PrecisionMantissa == 0) && (f32ExtraPrecisionMantissa != 0) {
+	if (f32PrecisionMantissa == 0) && (f32ExtraPrecisionMantissa != 0 || lostPrecision) {
 		return true
 	}
 	return false
