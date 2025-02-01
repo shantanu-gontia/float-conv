@@ -48,10 +48,12 @@ func (input Bits) ToBigFloat() big.Float {
 func FromBigFloat(input big.Float, rm floatBit.RoundingMode,
 	om floatBit.OverflowMode, um floatBit.UnderflowMode) (Bits,
 	big.Accuracy, floatBit.Status) {
+
 	// Since the [big] package's methods do not support rounding modes for
 	// direct conversion to bfloat16. We convert to an intermediate [float32]
 	// number and use our custom conversion functions [FromFloat32] to convert
 	// to [Bits]
+	input.SetMode(big.ToZero)
 	asFloat32, fromBigFloatAcc := input.Float32()
 	resultBits, resultAcc, resultStatus := FromFloat32(asFloat32, rm, om, um)
 
@@ -154,19 +156,26 @@ func FromFloat32(input float32, rm floatBit.RoundingMode,
 		resultVal, resultAcc =
 			roundTowardsZero(signBit, exponentBits, mantissaBits)
 	case floatBit.RoundTowardsNegativeInf:
-		// TODO: Implement Me
+		resultVal, resultAcc =
+			roundDown(signBit, exponentBits, mantissaBits)
 	case floatBit.RoundTowardsPositiveInf:
-		// TODO: Implement Me
+		resultVal, resultAcc =
+			roundUp(signBit, exponentBits, mantissaBits)
 	case floatBit.RoundHalfTowardsZero:
-		// TODO: Implement Me
+		resultVal, resultAcc =
+			roundHalfTowardsZero(signBit, exponentBits, mantissaBits)
 	case floatBit.RoundHalfTowardsNegativeInf:
-		// TODO: Implement Me
+		resultVal, resultAcc =
+			roundHalfTowardsNegativeInf(signBit, exponentBits, mantissaBits)
 	case floatBit.RoundHalfTowardsPositiveInf:
-		// TODO: Implement Me
+		resultVal, resultAcc =
+			roundHalfTowardsPositiveInf(signBit, exponentBits, mantissaBits)
 	case floatBit.RoundNearestEven:
-		// TODO: Implement Me
+		resultVal, resultAcc =
+			roundNearestEven(signBit, exponentBits, mantissaBits)
 	case floatBit.RoundNearestOdd:
-		// TODO: Implement Me
+		resultVal, resultAcc =
+			roundNearestOdd(signBit, exponentBits, mantissaBits)
 	}
 
 	return resultVal, resultAcc, floatBit.Fits
