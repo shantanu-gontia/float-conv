@@ -11,12 +11,12 @@ import "math/big"
 // mantissaBits must be passed in their float32 locations.
 // NOTE: This doesn't handle the underflow and overflow cases.
 func roundTowardsNegativeInf(signBit, exponentBits,
-	mantissaBits uint64) (Bits, big.Accuracy) {
+	mantissaBits uint32) (Bits, big.Accuracy) {
 	return roundDown(signBit, exponentBits, mantissaBits)
 }
 
 func roundDown(signBit, exponentBits,
-	mantissaBits uint64) (Bits, big.Accuracy) {
+	mantissaBits uint32) (Bits, big.Accuracy) {
 
 	mantissaBF16Precision := mantissaBits & 0x007f_0000
 	mantissaExtraPrecision := mantissaBits & 0x0000_ffff

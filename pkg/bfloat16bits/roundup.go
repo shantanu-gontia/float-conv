@@ -5,19 +5,19 @@ import (
 )
 
 // Utility function that returns the number rounded to a number that is
-// representable in float32. If y is the input number and x < y < x + 1ULP
-// where x is a float32 number. Then this rounding mode picks up x + 1ULP
+// representable in bfloat16. If y is the input number and x < y < x + 1ULP
+// where x is a bfloat16 number. Then this rounding mode picks up x + 1ULP
 // signBit, and exponentBits must be passed with their values shifted all the
 // way to the right.
-// exponentBits must be passed with the float32 bias applied
-// mantissaBits must be passed in their float64 locations.
+// exponentBits must be passed with the bfloat16 bias applied
+// mantissaBits must be passed in their float32 locations.
 // NOTE: This doesn't handle the underflow and overflow cases.
 func roundTowardsPositiveInf(signBit, exponentBits,
-	mantissaBits uint64) (Bits, big.Accuracy) {
+	mantissaBits uint32) (Bits, big.Accuracy) {
 	return roundUp(signBit, exponentBits, mantissaBits)
 }
 
-func roundUp(signBit, exponentBits, mantissaBits uint64) (Bits, big.Accuracy) {
+func roundUp(signBit, exponentBits, mantissaBits uint32) (Bits, big.Accuracy) {
 
 	mantissaBF16Precision := mantissaBits & 0x007f_0000
 	mantissaExtraPrecision := mantissaBits & 0x0000_ffff
