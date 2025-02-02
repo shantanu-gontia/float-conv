@@ -60,41 +60,75 @@ func (input Bits) ToBigFloat() big.Float {
 // cannot be represented in [float32] format exactly, then the rounding mode,
 // overflow mode and underflow mode decide the result. Returns the result
 // [Bits], a [big.Accuracy] which encodes whether the result value was the same,
-// larger or smaller than the input, and a [floatBit.Status] which encodes,
+// larger () or smaller than the input, and a [floatBit.Status] which encodes,
 // whether the result fit in the [Bits], caused overflow or underflow.
 func FromBigFloat(input big.Float, rm floatBit.RoundingMode,
 	om floatBit.OverflowMode, um floatBit.UnderflowMode) (Bits,
 	big.Accuracy, floatBit.Status) {
 
-	// Since the [big] package's methods do not support all rounding modes for
-	// direct conversion to float32. We convert to an intermediate float64
-	// number and use our custom conversion function [Fromfloat64] to convert
-	// to [Bits]
+	// We need to get the value with extra precision truncated
+	// But, Float64() returns the float64 value that is closest to the input.
+	// Therefore, to get the truncated result, we need to subtract 1 ULP of
+	// precision if the number is positive and the float64 is larger, or
+	// if the number is negative and the float64 is smaller
+	// Since the [big] package's methods do not support rounding modes for
+	// direct conversion to float32 with all the other metadata we want.
+	// We convert to an intermediate float64 number and use our custom
+	// conversion functions [FromFloat32] to convert to [Bits]
+	closestFloat64, fromBigFloatAcc := input.Float64()
 
-	input.SetMode(big.ToZero)
-	asFloat64, fromBigFloatAcc := input.Float64()
+	var asFloat64 float64
+	// Float64() returns the float64 value that is closest to the input.
+	// This might cause it to round up for some cases.
+	// But, we need to get the value with extra precision truncated
+	// Therefore, to get the truncated result, we need to subtract 1 ULP of
+	// precision if the number is positive and the float64 is larger, or
+	// if the number is negative and the float64 is smaller, or alternatively
+	// if the .Float64() returns big.Above as the accuracy, because for
+	// truncation this should always be big.Below
+	// Note that however, we need to exempt, the case where the results
+	// becomes infinity.
+	if math.IsInf(closestFloat64, 1) && fromBigFloatAcc == big.Above {
+		// If input was greater than float64 Maximum Normal, then closestFloat64
+		// would be +inf, and the accuracy returned would be big.Above
+		// MaxFloat64 will trigger overflow repsonse in F32
+		asFloat64 = math.MaxFloat64
+		// We set the accuracy to exact, so that the F32 methods alter them
+		// correctly
+		fromBigFloatAcc = big.Exact
+	} else if math.IsInf(closestFloat64, -1) && fromBigFloatAcc == big.Below {
+		// Similarly,
+		// for -inf case, it will be big.Below.
+		// -MaxFloat64 will trigger overflow response in F32
+		asFloat64 = -math.MaxFloat64
+		fromBigFloatAcc = big.Exact
+	} else if closestFloat64 == 0.0 && fromBigFloatAcc == big.Below {
+		// We also need to do this for the cases, where closestFloat64 is smaller
+		// than the minimum float64 subnormal, again, because we want to handle
+		// the underflow response in the F32 methods.
+		// SmallestNonzeroFloat64 will trigger underflow response in F32
+		asFloat64 = math.SmallestNonzeroFloat64
+		fromBigFloatAcc = big.Exact
+	} else if closestFloat64 == -0.0 && fromBigFloatAcc == big.Above {
+		// And for the negative case
+		// F32.NegativeMinSubnormal will trigger underflow response in BF16
+		asFloat64 = -math.SmallestNonzeroFloat64
+		fromBigFloatAcc = big.Exact
+	} else if (input.Sign() > 0 && fromBigFloatAcc == big.Above) ||
+		(input.Sign() < 0 && fromBigFloatAcc == big.Below) {
+		// For positive numbers if the accuracy was big.Above, then Float32()
+		// caused rounding away from zero. This is undesirable. To make it
+		// truncation we need to subtract 1 ULP from the number
+		closestFloat64Bits := math.Float64bits(closestFloat64)
+		asFloat64 = math.Float64frombits(closestFloat64Bits - 1)
+		// Since we made it truncation, ther result must now be smaller
+		fromBigFloatAcc = big.Below
+	} else {
+		asFloat64 = closestFloat64
+	}
+
 	resultBits, resultAcc, resultStatus := FromFloat64(asFloat64, rm, om, um)
-
-	// If conversion to float64 wasn't itself exact, then we just use that
-	// as the status, otherwise we use the status from the float64 -> float32
-	// conversion
-	if fromBigFloatAcc == big.Exact {
-		return resultBits, resultAcc, resultStatus
-	}
-
-	// There is underflow if the resulting float was 0 but the input wasn't
-	if input.Sign() != 0 && (math.Float64bits(asFloat64) ==
-		0x8000_0000_0000_0000 || math.Float64bits(asFloat64) ==
-		0x0) {
-		resultStatus = floatBit.Underflow
-	}
-
-	// There is overflow if the resulting float was +/- inf but the input wasn't
-	if !input.IsInf() && math.IsInf(asFloat64, 0) {
-		resultStatus = floatBit.Overflow
-	}
-
-	return resultBits, fromBigFloatAcc, resultStatus
+	return resultBits, resultAcc, resultStatus
 }
 
 // Convert the given [float64] number to a [Bits] type which represents the bits
