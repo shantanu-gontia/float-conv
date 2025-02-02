@@ -30,6 +30,7 @@ in hexfloat formats.
 * The `--underflow-mode` option is used to specify the response if the number (in magnitude) is smaller than the minimum representable (in magnitude) in the target format. Supported options are
   * `flushzero`: Flush the number to 0. If the target format supports signed zeros, then the sign is same as that of the input
   * `satmin`: Saturates the number to the minimum representable, with the same sign as the input [*Default*]
+* The `--precision` flag is used to augment the precision to use when parsing the input. The default is 53.
 
 ## Example
 
@@ -44,15 +45,15 @@ Conversion Error: 0e+00 (Exact)
 Binary: 0b00111110000000000000000000000000
 Hexadecimal: 0x3e000000
 
-$ float-conv --num=0.125  --format=bfloat16 --underflow-mode=flushzero
+$ float-conv --num=1e-256 --format=bfloat16 --underflow-mode=flushzero
 BFloat16
 |Sign|Exponent|Mantissa|
 |   0|00000000| 0000000|
 Decimal: 0e+00
 Hexfloat: 0x0p+00
 Conversion Error: -1e-256 (Below)
-Binary: 0b00000000000000000000000000000000
-Hexadecimal: 0x00000000
+Binary: 0b0000000000000000
+Hexadecimal: 0x0000
 UNDERFLOW
 ```
 

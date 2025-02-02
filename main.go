@@ -147,10 +147,10 @@ func handleBFloat16(bf *big.Float, rm floatBit.RoundingMode, om floatBit.Overflo
 	fmt.Printf("Conversion Error: %s (%s)\n", convStr, accuracy)
 
 	// Print the bits in binary
-	fmt.Printf("Binary: %0#32b\n", floatVal)
+	fmt.Printf("Binary: %0#16b\n", floatVal)
 
 	// Print the bits in hexadecimal
-	fmt.Printf("Hexadecimal: %0#8x\n", floatVal)
+	fmt.Printf("Hexadecimal: %0#4x\n", floatVal)
 
 	if status != floatBit.Fits {
 		fmt.Printf("%s\n", strings.ToUpper(status.String()))
