@@ -123,37 +123,37 @@ func handleBFloat16(bf *big.Float, rm floatBit.RoundingMode, om floatBit.Overflo
 	// First we print the type
 	fmt.Println("BFloat16")
 
-	// Get the Float32 Value
-	bfloat16Val, _, status := BF16.FromBigFloat(*bf, rm, om, um)
+	// Get the BFloat16 Value
+	floatVal, accuracy, status := BF16.FromBigFloat(*bf, rm, om, um)
 
 	// Print the bits in a table
-	fmt.Print(bfloat16Val.ToFloatFormat().AsTable())
+	fmt.Print(floatVal.ToFloatFormat().AsTable())
 
 	// Print the decimal value
-	asBigFloat := bfloat16Val.ToBigFloat()
-	fmt.Printf("Decimal: %s\n", asBigFloat.String())
+	asBigFloat := floatVal.ToBigFloat()
+	fmt.Printf("Decimal: %s\n", asBigFloat.Text('e', -1))
 
 	// Print the hexfloat value
-	fmt.Printf("Hexfloat: %x\n", bfloat16Val.ToFloat32())
+	fmt.Printf("Hexfloat: %x\n", floatVal.ToFloat32())
 
 	// Print the conversion error
-	conv, err := bfloat16Val.ConversionError(bf)
+	conv, err := floatVal.ConversionError(bf)
 	var convStr string
 	if err == nil {
-		convStr = conv.String()
+		convStr = conv.Text('e', -1)
 	} else {
 		convStr = "NaN"
 	}
-	fmt.Printf("Conversion Error: %s\n", convStr)
+	fmt.Printf("Conversion Error: %s (%s)\n", convStr, accuracy)
 
 	// Print the bits in binary
-	fmt.Printf("Binary: %0#16b\n", bfloat16Val)
+	fmt.Printf("Binary: %0#32b\n", floatVal)
 
 	// Print the bits in hexadecimal
-	fmt.Printf("Hexadecimal: %0#4x\n", bfloat16Val)
+	fmt.Printf("Hexadecimal: %0#8x\n", floatVal)
 
 	if status != floatBit.Fits {
-		fmt.Printf("%s\n", status.String())
+		fmt.Printf("%s\n", strings.ToUpper(status.String()))
 	}
 }
 

@@ -72,27 +72,21 @@ func FromBigFloat(input big.Float, rm floatBit.RoundingMode,
 		// would be +inf, and the accuracy returned would be big.Above
 		// F32.PositiveMaxNormal will trigger overflow repsonse in BF16
 		asFloat32 = math.Float32frombits(F32.PositiveMaxNormal)
-		// We set the accuracy to exact, so that the BF16 methods alter them
-		// correctly
-		fromBigFloatAcc = big.Exact
 	} else if math.IsInf(float64(closestFloat32), -1) && fromBigFloatAcc == big.Below {
 		// Similarly,
 		// for -inf case, it will be big.Below.
 		// F32.NegativeMaxNormal will trigger overflow response in BF16
 		asFloat32 = math.Float32frombits(F32.NegativeMaxNormal)
-		fromBigFloatAcc = big.Exact
 	} else if closestFloat32 == 0.0 && fromBigFloatAcc == big.Below {
 		// We also need to do this for the cases, where closestFloat32 is smaller
 		// than the minimum float32 subnormal, again, because we want to handle
 		// the underflow response in the BF16 methods.
 		// F32.PositiveMinSubnormal will trigger underflow response in BF16
 		asFloat32 = math.Float32frombits(F32.PositiveMinSubnormal)
-		fromBigFloatAcc = big.Exact
 	} else if closestFloat32 == -0.0 && fromBigFloatAcc == big.Above {
 		// And for the negative case
 		// F32.NegativeMinSubnormal will trigger underflow response in BF16
 		asFloat32 = math.Float32frombits(F32.NegativeMinSubnormal)
-		fromBigFloatAcc = big.Exact
 	} else if (input.Sign() > 0 && fromBigFloatAcc == big.Above) ||
 		(input.Sign() < 0 && fromBigFloatAcc == big.Below) {
 		// For positive numbers if the accuracy was big.Above, then Float32()
@@ -100,8 +94,6 @@ func FromBigFloat(input big.Float, rm floatBit.RoundingMode,
 		// truncation we need to subtract 1 ULP from the number
 		closestFloat32Bits := math.Float32bits(closestFloat32)
 		asFloat32 = math.Float32frombits(closestFloat32Bits - 1)
-		// Since we made it truncation, ther result must now be smaller
-		fromBigFloatAcc = big.Below
 	} else {
 		asFloat32 = closestFloat32
 	}
