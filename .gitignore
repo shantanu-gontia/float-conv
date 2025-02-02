@@ -26,3 +26,6 @@ go.work.sum
 
 # build directory is for executables
 build/
+
+# vscode
+.vscode/
