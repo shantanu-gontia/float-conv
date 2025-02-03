@@ -5,6 +5,7 @@ converted number, conversion error etc.
 
 * IEEE-754 Float32
 * BFloat16
+* Float16
 
 ## Usage
 
@@ -14,7 +15,7 @@ float-conv --num=<number> [--format=<format>] [--round-mode=<rounding mode>] [--
 
 * The option `--num` is used to provide the input number. The number can be input as either decimal, scientific or
 in hexfloat formats.
-* The `--format` option is used to specify which floating point format to convert to. Valid values are `float32` [*Default*], `bfloat16`.
+* The `--format` option is used to specify which floating point format to convert to. Valid values are `float32` [*Default*], `bfloat16`, `float16`.
 * The `--round-mode` option is used to specify which rounding mode to use, if the number cannot be exactly represented in the desired format. Supported options are
   * `rtz`: Round Towards Zero
   * `rtposinf`: Round Towards Positive Infinity
@@ -59,5 +60,4 @@ UNDERFLOW
 
 ## Roadmap
 
-* Add support for Half-Precision floating points (float16/binary16)
 * Add support for OCP Microscaling 8-bit Formats
