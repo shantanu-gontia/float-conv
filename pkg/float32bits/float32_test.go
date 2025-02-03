@@ -171,53 +171,76 @@ func TestCheckUnderflow(t *testing.T) {
 func TestRoundTowardsZero(t *testing.T) {
 	testCases := []struct {
 		// Inputs
-		signBit      uint64
-		exponentBits uint64
-		mantissaBits uint64
+		signBit       uint64
+		exponentBits  uint64
+		mantissaBits  uint64
+		lostPrecision bool
 		// Outputs
 		goldenVal Bits
 		goldenAcc big.Accuracy
 	}{
 		// +Zero -> +Zero
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0x0,
-			goldenVal:    Bits(0x0),
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0x0,
+			lostPrecision: false,
+			goldenVal:     Bits(0x0),
+			goldenAcc:     big.Exact,
 		},
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000001_00000000000000000000000000000,
-			goldenVal:    Bits(0b0_00000000_00000000000000000000001),
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     Bits(0b0_00000000_00000000000000000000001),
+			goldenAcc:     big.Exact,
 		},
 		// Positive RTZ to below
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000001_01000000000000000000000000001,
-			goldenVal:    Bits(0b0_00000000_00000000000000000000001),
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_01000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     Bits(0b0_00000000_00000000000000000000001),
+			goldenAcc:     big.Below,
 		},
 		// Negative RTZ to above
 		{
-			signBit:      0x1,
-			exponentBits: 0x1,
-			mantissaBits: 0b0_00000000000_00000000001001000001111_11000000000000000000000000001,
-			goldenVal:    Bits(0b1_00000001_00000000001001000001111),
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x1,
+			mantissaBits:  0b0_00000000000_00000000001001000001111_11000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     Bits(0b1_00000001_00000000001001000001111),
+			goldenAcc:     big.Above,
+		},
+		// lost precision
+		{
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_00000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     Bits(0b1_00000000_00000000000000000000001),
+			goldenAcc:     big.Above,
+		},
+		{
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_00000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     Bits(0b0_00000000_00000000000000000000001),
+			goldenAcc:     big.Below,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run("RoundTowardsZero", func(t *testing.T) {
-			resultVal, resultAcc := truncate(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
+			resultVal, resultAcc := truncate(tt.signBit, tt.exponentBits, tt.mantissaBits, tt.lostPrecision)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
+				t.Logf("lostPrecision: %v\n", tt.lostPrecision)
 				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 			}
@@ -232,61 +255,85 @@ func TestRoundTowardsPositiveInf(t *testing.T) {
 
 	testCases := []struct {
 		// Inputs
-		signBit      uint64
-		exponentBits uint64
-		mantissaBits uint64
+		signBit       uint64
+		exponentBits  uint64
+		mantissaBits  uint64
+		lostPrecision bool
 		// Outputs
 		goldenVal Bits
 		goldenAcc big.Accuracy
 	}{
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Normal, Rounds up (positive)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Normal, Truncates (negative)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, Rounds up (positive)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_111111111111111111111111_00000000000000000000000000001,
-			goldenVal:    0b0_00000001_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_111111111111111111111111_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_000000001_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, truncates (negative)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_111111111111111111111111_00000000000000000000000000001,
-			goldenVal:    0b1_00000000_11111111111111111111111,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_111111111111111111111111_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_11111111111111111111111,
+			goldenAcc:     big.Above,
+		},
+		// lost precision
+		{
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_00000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b1_00000000_00000000000000000000001,
+			goldenAcc:     big.Above,
+		},
+		{
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_00000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b0_00000000_00000000000000000000010,
+			goldenAcc:     big.Above,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run("RoundTowardsPositiveInf", func(t *testing.T) {
-			resultVal, resultAcc := roundTowardsPositiveInf(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
+			resultVal, resultAcc := roundTowardsPositiveInf(tt.signBit, tt.exponentBits, tt.mantissaBits, tt.lostPrecision)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
+				t.Logf("lostPrecision: %v", tt.lostPrecision)
 				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 			}
@@ -301,60 +348,85 @@ func TestRoundTowardsNegativeInf(t *testing.T) {
 
 	testCases := []struct {
 		// Inputs
-		signBit      uint64
-		exponentBits uint64
-		mantissaBits uint64
+		signBit       uint64
+		exponentBits  uint64
+		mantissaBits  uint64
+		lostPrecision bool
 		// Outputs
 		goldenVal Bits
 		goldenAcc big.Accuracy
 	}{
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Normal, Rounds up (negative)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Normal, Truncates (positive)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, Rounds up (negative)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_111111111111111111111111_00000000000000000000000000001,
-			goldenVal:    0b1_00000001_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_111111111111111111111111_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000001_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, truncates (positive)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_111111111111111111111111_00000000000000000000000000001,
-			goldenVal:    0b0_00000000_11111111111111111111111,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_111111111111111111111111_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_11111111111111111111111,
+			goldenAcc:     big.Below,
+		},
+		// lost precision
+		{
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_00000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b1_00000000_00000000000000000000010,
+			goldenAcc:     big.Below,
+		},
+		{
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_00000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b0_00000000_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 	}
+
 	for _, tt := range testCases {
 		t.Run("RoundTowardsNegativeInf", func(t *testing.T) {
-			resultVal, resultAcc := roundTowardsNegativeInf(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
+			resultVal, resultAcc := roundTowardsNegativeInf(tt.signBit, tt.exponentBits, tt.mantissaBits, tt.lostPrecision)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
+				t.Logf("lostPrecision: %v\n", tt.lostPrecision)
 				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 			}
@@ -371,133 +443,166 @@ func TestRoundHalfTowardsZero(t *testing.T) {
 
 	testCases := []struct {
 		// Inputs
-		signBit      uint64
-		exponentBits uint64
-		mantissaBits uint64
+		signBit       uint64
+		exponentBits  uint64
+		mantissaBits  uint64
+		lostPrecision bool
 		// Outputs
 		goldenVal Bits
 		goldenAcc big.Accuracy
 	}{
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000001000010000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000001000010000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000001000010000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000001000010000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Normal, truncate, because closer to truncated value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Normal, truncate because closer to truncated value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Normal, round up, because closer to rounded up value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Normal, round up, because closer to rounded up value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Normal, truncate, because half-way (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Normal, truncate, because half-way (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b1_00000010_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Subormal, truncate, because closer to truncated value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b1_00000000_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, truncate because closer to truncated value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000000_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, round up, because closer to rounded up value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b1_00000000_00000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, round up, because closer to rounded up value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b0_00000000_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Subormal, truncate, because half-way (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b0_00000000_10000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_10000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, truncate, because half-way (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b1_00000000_10000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_10000000000000000000000,
+			goldenAcc:     big.Above,
+		},
+		// lost precision
+		{
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_10000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b1_00000000_00000000000000000000010,
+			goldenAcc:     big.Below,
+		},
+		{
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_10000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b0_00000000_00000000000000000000010,
+			goldenAcc:     big.Above,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run("RoundHalfTowardsZero", func(t *testing.T) {
-			resultVal, resultAcc := roundHalfTowardsZero(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
+			resultVal, resultAcc := roundHalfTowardsZero(tt.signBit, tt.exponentBits, tt.mantissaBits, tt.lostPrecision)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
+				t.Logf("lostPrecision: %v", tt.lostPrecision)
 				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 			}
@@ -514,133 +619,166 @@ func TestRoundHalfTowardsPositiveInf(t *testing.T) {
 
 	testCases := []struct {
 		// Inputs
-		signBit      uint64
-		exponentBits uint64
-		mantissaBits uint64
+		signBit       uint64
+		exponentBits  uint64
+		mantissaBits  uint64
+		lostPrecision bool
 		// Outputs
 		goldenVal Bits
 		goldenAcc big.Accuracy
 	}{
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000001000010000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000001000010000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000001000010000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000001000010000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Normal, truncate, because closer to truncated value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Normal, truncate because closer to truncated value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Normal, round up, because closer to rounded up value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Normal, round up, because closer to rounded up value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Normal, round up, because half-way (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Normal, truncate, because half-way (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b1_00000010_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Subormal, truncate, because closer to truncated value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b1_00000000_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, truncate because closer to truncated value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000000_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, round up, because closer to rounded up value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b1_00000000_00000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, round up, because closer to rounded up value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b0_00000000_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Subormal, round up, because half-way (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b0_00000000_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, truncate, because half-way (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b1_00000000_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_00000000000000000000000,
+			goldenAcc:     big.Above,
+		},
+		// lost precision
+		{
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_10000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b1_00000000_00000000000000000000010,
+			goldenAcc:     big.Below,
+		},
+		{
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_10000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b0_00000000_00000000000000000000010,
+			goldenAcc:     big.Above,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run("RoundHalfTowardsPositiveInf", func(t *testing.T) {
-			resultVal, resultAcc := roundHalfTowardsPositiveInf(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
+			resultVal, resultAcc := roundHalfTowardsPositiveInf(tt.signBit, tt.exponentBits, tt.mantissaBits, tt.lostPrecision)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
+				t.Logf("lostPrecision: %v", tt.lostPrecision)
 				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 			}
@@ -657,92 +795,103 @@ func TestRoundHalfTowardsNegativeInf(t *testing.T) {
 
 	testCases := []struct {
 		// Inputs
-		signBit      uint64
-		exponentBits uint64
-		mantissaBits uint64
+		signBit       uint64
+		exponentBits  uint64
+		mantissaBits  uint64
+		lostPrecision bool
 		// Outputs
 		goldenVal Bits
 		goldenAcc big.Accuracy
 	}{
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000001000010000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000001000010000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000001000010000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000001000010000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Normal, truncate, because closer to truncated value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Normal, truncate because closer to truncated value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Normal, round up, because closer to rounded up value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Normal, round up, because closer to rounded up value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Normal, truncate, because half-way (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Normal, round up, because half-way (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b1_00000010_00000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Subormal, truncate, because closer to truncated value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_01110000000000000000000000001,
-			goldenVal:    0b1_00000000_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_01110000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, truncate because closer to truncated value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000000_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, round up, because closer to rounded up value (-ve)
 		{
@@ -754,36 +903,57 @@ func TestRoundHalfTowardsNegativeInf(t *testing.T) {
 		},
 		// Subnormal, round up, because closer to rounded up value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b0_00000000_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, truncate, because half-way (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_10000000000000000000001_10000000000000000000000000000,
-			goldenVal:    0b0_00000000_10000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_10000000000000000000001_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_10000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, round up, because half-way (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_10000000000000000000001_10000000000000000000000000000,
-			goldenVal:    0b1_00000000_10000000000000000000010,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_10000000000000000000001_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_10000000000000000000010,
+			goldenAcc:     big.Below,
+		},
+		// lost precision
+		{
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_10000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b1_00000000_00000000000000000000010,
+			goldenAcc:     big.Below,
+		},
+		{
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_10000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b0_00000000_00000000000000000000010,
+			goldenAcc:     big.Above,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run("RoundHalfTowardsNegativeInf", func(t *testing.T) {
-			resultVal, resultAcc := roundHalfTowardsNegativeInf(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
+			resultVal, resultAcc := roundHalfTowardsNegativeInf(tt.signBit, tt.exponentBits, tt.mantissaBits, tt.lostPrecision)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
+				t.Logf("lostPrecision: %v", tt.lostPrecision)
 				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 			}
@@ -798,173 +968,211 @@ func TestRoundNearestEven(t *testing.T) {
 
 	testCases := []struct {
 		// Inputs
-		signBit      uint64
-		exponentBits uint64
-		mantissaBits uint64
+		signBit       uint64
+		exponentBits  uint64
+		mantissaBits  uint64
+		lostPrecision bool
 		// Outputs
 		goldenVal Bits
 		goldenAcc big.Accuracy
 	}{
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000001000010000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000001000010000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000001000010000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000001000010000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Normal, truncate, because closer to truncated value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Normal, truncate because closer to truncated value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Normal, round up, because closer to rounded up value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Normal, round up, because closer to rounded up value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Normal, truncate, because half-way, f32 LSB is zero (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_11100000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b0_00000010_11100000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_11100000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_11100000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Normal, truncate, because half-way, f32 LSB is zero (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_11100000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b1_00000010_11100000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_11100000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_11100000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Normal, round up, because half-way, f32 LSB is one (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_11100000000000000000001_10000000000000000000000000000,
-			goldenVal:    0b0_00000010_11100000000000000000010,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_11100000000000000000001_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_11100000000000000000010,
+			goldenAcc:     big.Above,
 		},
 		// Normal, round up, because half-way, f32 LSB is one (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_11100000000000000000001_10000000000000000000000000000,
-			goldenVal:    0b1_00000010_11100000000000000000010,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_11100000000000000000001_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_11100000000000000000010,
+			goldenAcc:     big.Below,
 		},
 		// Subormal, truncate, because closer to truncated value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_01110000000000000000000000001,
-			goldenVal:    0b1_00000000_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_01110000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, truncate because closer to truncated value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000000_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, round up, because closer to rounded up value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b1_00000000_00000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, round up, because closer to rounded up value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b0_00000000_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, truncate, because half-way, f32 LSB is zero (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b0_00000000_10000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_10000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, truncate, because half-way, f32 LSB is zero (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b1_00000000_10000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_10000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, round up, because half-way, f32 LSB is one (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_11111111111111111111111_10000000000000000000000000000,
-			goldenVal:    0b0_00000001_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_11111111111111111111111_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000001_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, round up, because half-way, f32 LSB is one (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_11111111111111111111111_10000000000000000000000000000,
-			goldenVal:    0b1_00000001_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_11111111111111111111111_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000001_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Minimum Subnormal (Exact)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000001_00000000000000000000000000000,
-			goldenVal:    0b0_00000000_00000000000000000000001,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000001,
+			goldenAcc:     big.Exact,
+		},
+		// lost precision
+		{
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000010_10000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b1_00000000_00000000000000000000011,
+			goldenAcc:     big.Below,
+		},
+		{
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000010_10000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b0_00000000_00000000000000000000011,
+			goldenAcc:     big.Above,
 		},
 	}
 
 	for _, tt := range testCases {
-		t.Run("RoundHalfTowardsNegativeInf", func(t *testing.T) {
-			resultVal, resultAcc := roundNearestEven(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
+		t.Run("RoundNearestEven", func(t *testing.T) {
+			resultVal, resultAcc := roundNearestEven(tt.signBit, tt.exponentBits, tt.mantissaBits, tt.lostPrecision)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
+				t.Logf("lostPrecision: %v\n", tt.lostPrecision)
 				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 			}
@@ -979,165 +1187,202 @@ func TestRoundNearestOdd(t *testing.T) {
 
 	testCases := []struct {
 		// Inputs
-		signBit      uint64
-		exponentBits uint64
-		mantissaBits uint64
+		signBit       uint64
+		exponentBits  uint64
+		mantissaBits  uint64
+		lostPrecision bool
 		// Outputs
 		goldenVal Bits
 		goldenAcc big.Accuracy
 	}{
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Exact
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000001000010000000000_00000000000000000000000000000,
-			goldenVal:    0b0_00000010_00000001000010000000000,
-			goldenAcc:    big.Exact,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000001000010000000000_00000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000001000010000000000,
+			goldenAcc:     big.Exact,
 		},
 		// Normal, truncate, because closer to truncated value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Normal, truncate because closer to truncated value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Normal, round up, because closer to rounded up value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b1_00000010_00000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Normal, round up, because closer to rounded up value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b0_00000010_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Normal, round up, because half-way, f32 LSB is zero (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_11100000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b0_00000010_11100000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_11100000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_11100000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Normal, round up, because half-way, f32 LSB is zero (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_11100000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b1_00000010_11100000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_11100000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_11100000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Normal, truncate, because half-way, f32 LSB is one (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_11100000000000000000001_10000000000000000000000000000,
-			goldenVal:    0b0_00000010_11100000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_11100000000000000000001_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000010_11100000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Normal, truncate, because half-way, f32 LSB is one (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x2,
-			mantissaBits: 0b0_00000000000_11100000000000000000001_10000000000000000000000000000,
-			goldenVal:    0b1_00000010_11100000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x2,
+			mantissaBits:  0b0_00000000000_11100000000000000000001_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000010_11100000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Subormal, truncate, because closer to truncated value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_01110000000000000000000000001,
-			goldenVal:    0b1_00000000_00000000000000000000000,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_01110000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_00000000000000000000000,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, truncate because closer to truncated value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
-			goldenVal:    0b0_00000000_00000000000000000000000,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_00000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000000,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, round up, because closer to rounded up value (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b1_00000000_00000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_00000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, round up, because closer to rounded up value (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
-			goldenVal:    0b0_00000000_00000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000000_10000000000000000000000000001,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_00000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, round up, because half-way, f32 LSB is zero (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b0_00000000_10000000000000000000001,
-			goldenAcc:    big.Above,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_10000000000000000000001,
+			goldenAcc:     big.Above,
 		},
 		// Subnormal, round up, because half-way, f32 LSB is zero (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
-			goldenVal:    0b1_00000000_10000000000000000000001,
-			goldenAcc:    big.Below,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_10000000000000000000000_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_10000000000000000000001,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, truncate, because half-way, f32 LSB is one (+ve)
 		{
-			signBit:      0x0,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_11111111111111111111111_10000000000000000000000000000,
-			goldenVal:    0b0_00000000_11111111111111111111111,
-			goldenAcc:    big.Below,
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_11111111111111111111111_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b0_00000000_11111111111111111111111,
+			goldenAcc:     big.Below,
 		},
 		// Subnormal, truncate, because half-way, f32 LSB is one (-ve)
 		{
-			signBit:      0x1,
-			exponentBits: 0x0,
-			mantissaBits: 0b0_00000000000_11111111111111111111111_10000000000000000000000000000,
-			goldenVal:    0b1_00000000_11111111111111111111111,
-			goldenAcc:    big.Above,
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_11111111111111111111111_10000000000000000000000000000,
+			lostPrecision: false,
+			goldenVal:     0b1_00000000_11111111111111111111111,
+			goldenAcc:     big.Above,
+		},
+		// lost precision
+		{
+			signBit:       0x1,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_10000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b1_00000000_00000000000000000000010,
+			goldenAcc:     big.Below,
+		},
+		{
+			signBit:       0x0,
+			exponentBits:  0x0,
+			mantissaBits:  0b0_00000000000_00000000000000000000001_10000000000000000000000000000,
+			lostPrecision: true,
+			goldenVal:     0b0_00000000_00000000000000000000010,
+			goldenAcc:     big.Above,
 		},
 	}
 
 	for _, tt := range testCases {
-		t.Run("RoundHalfTowardsNegativeInf", func(t *testing.T) {
-			resultVal, resultAcc := roundNearestOdd(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
+		t.Run("RoundNearestOdd", func(t *testing.T) {
+			resultVal, resultAcc := roundNearestOdd(tt.signBit, tt.exponentBits, tt.mantissaBits, tt.lostPrecision)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
+				t.Logf("lostPrecision: %v\n", tt.lostPrecision)
 				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 			}
