@@ -42,6 +42,14 @@ func roundNearestEven(signBit, exponentBits, mantissaBits uint32,
 		addedOne = true
 	}
 
+	// If extra precision was lost before, then we need to add one if we're
+	// halfway through in the adjusted mantissa (because this means we're
+	// actually greater than the midpoint)
+	if mantissaExtraPrecision == f32Float16HalfSubnormalLSB && lostPrecision {
+		exponentMantissaComposite += 1
+		addedOne = true
+	}
+
 	mantissaF32LSB := mantissaBits & f32Float16SubnormalLSB
 	// In the case we're at the mid-point, we only add 1, if the LSB of the
 	// float32 retained mantissa is 1

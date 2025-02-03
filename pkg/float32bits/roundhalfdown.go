@@ -30,6 +30,14 @@ func roundHalfTowardsNegativeInf(signBit, exponentBits,
 		addedOne = true
 	}
 
+	// If extra precision was lost before, then we need to add one if we're
+	// halfway through in the adjusted mantissa (because this means we're
+	// actually greater than the midpoint)
+	if mantissaExtraPrecision == f64float32HalfSubnormalLSB && lostPrecision {
+		exponentMantissaComposite += 1
+		addedOne = true
+	}
+
 	// In the case that we're halfway through,
 	// We add 1, only if the sign was negative, otherwise we truncate
 	if (mantissaExtraPrecision ==
