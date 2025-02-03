@@ -11,13 +11,14 @@ import (
 // exponentBits must be passed with the float16 bias applied
 // mantissaBits must be passed in their float32 locations.
 // NOTE: This doesn't handle the underflow and overflow cases.
-func roundTowardsZero(signBit, exponentBits, mantissaBits uint32) (Bits,
-	big.Accuracy) {
-	return truncate(signBit, exponentBits, mantissaBits)
+func roundTowardsZero(signBit, exponentBits, mantissaBits uint32,
+	lostPrecision bool) (Bits, big.Accuracy) {
+	return truncate(signBit, exponentBits, mantissaBits, lostPrecision)
 }
 
 // truncation is the same as rounding towards zero
-func truncate(signBit, exponentBits, mantissaBits uint32) (Bits, big.Accuracy) {
+func truncate(signBit, exponentBits, mantissaBits uint32,
+	lostPrecision bool) (Bits, big.Accuracy) {
 	mantissaF16Precision := mantissaBits & f32Float16MantissaMask
 	mantissaExtraPrecision := mantissaBits & f32Float16HalfSubnormalMask
 
@@ -31,7 +32,7 @@ func truncate(signBit, exponentBits, mantissaBits uint32) (Bits, big.Accuracy) {
 
 	// If there was extra precision, then the number did not fit in the
 	// float32 format, so we need to report the status appropriately
-	if mantissaExtraPrecision != 0 {
+	if mantissaExtraPrecision != 0 || lostPrecision {
 		if signBit == 0 {
 			resultAcc = big.Below
 		} else {

@@ -10,13 +10,15 @@ import "math/big"
 // exponentBits must be passed with the float32 bias applied
 // mantissaBits must be passed in their float64 locations.
 // NOTE: This doesn't handle the underflow and overflow cases.
+// The parameter lostPrecision indicates whether the mantissa passed had already
+// lost precision during any preprocessing
 func roundTowardsNegativeInf(signBit, exponentBits,
-	mantissaBits uint64) (Bits, big.Accuracy) {
-	return roundDown(signBit, exponentBits, mantissaBits)
+	mantissaBits uint64, lostPrecision bool) (Bits, big.Accuracy) {
+	return roundDown(signBit, exponentBits, mantissaBits, lostPrecision)
 }
 
 func roundDown(signBit, exponentBits,
-	mantissaBits uint64) (Bits, big.Accuracy) {
+	mantissaBits uint64, lostPrecision bool) (Bits, big.Accuracy) {
 
 	mantissaF32Precision := mantissaBits & f64float32MantissaMask
 	mantissaExtraPrecision := mantissaBits & f64float32HalfSubnormalMask
@@ -32,7 +34,7 @@ func roundDown(signBit, exponentBits,
 	exponentMantissaComposite := (float32Exponent | float32Mantissa)
 
 	// If positive and there is extra precision, then add 1
-	if (float32Sign != 0) && (mantissaExtraPrecision != 0) {
+	if (float32Sign != 0) && (mantissaExtraPrecision != 0 || lostPrecision) {
 		exponentMantissaComposite += 1
 	}
 	// Since, we don't handle overflow, all we need to do now is attach the sign
@@ -40,7 +42,7 @@ func roundDown(signBit, exponentBits,
 
 	resultAcc := big.Exact
 	// If there was extra precision bits set, then we need to
-	if mantissaExtraPrecision != 0 {
+	if mantissaExtraPrecision != 0 || lostPrecision {
 		// We always round to a smaller value
 		resultAcc = big.Below
 	}
