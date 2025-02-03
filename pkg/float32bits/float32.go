@@ -208,6 +208,10 @@ func FromFloat64(input float64, rm floatBit.RoundingMode,
 	alignedMantissa := mantissaBits
 	adjustedExponent := uint64(actualExponent + ExponentBias)
 
+	// Value that indicates whether any precision was lost when preprocessing
+	// the mantissa before passing it down to the rounding routines
+	lostPrecision := false
+
 	// Before performing any rounding, we need to make sure this exponent
 	// can actually be represented in the float32 format. If the exponent,
 	// is smaller than the minimum exponent allowed in float32 (-126), this
@@ -236,7 +240,6 @@ func FromFloat64(input float64, rm floatBit.RoundingMode,
 
 		// For accurately determining underflow, we also need to check
 		// if we shifted any 1s to the right
-		lostPrecision := false
 
 		// Now, to align the bits of the original format, with the mantissa
 		// of the destination format as a subnormal, we have to shift right
@@ -285,28 +288,28 @@ func FromFloat64(input float64, rm floatBit.RoundingMode,
 	switch rm {
 	case floatBit.RoundTowardsZero:
 		resultVal, resultAcc = roundTowardsZero(signBit,
-			adjustedExponent, alignedMantissa)
+			adjustedExponent, alignedMantissa, lostPrecision)
 	case floatBit.RoundTowardsNegativeInf:
 		resultVal, resultAcc = roundTowardsNegativeInf(signBit,
-			adjustedExponent, alignedMantissa)
+			adjustedExponent, alignedMantissa, lostPrecision)
 	case floatBit.RoundTowardsPositiveInf:
 		resultVal, resultAcc = roundTowardsPositiveInf(signBit,
-			adjustedExponent, alignedMantissa)
+			adjustedExponent, alignedMantissa, lostPrecision)
 	case floatBit.RoundHalfTowardsZero:
 		resultVal, resultAcc = roundHalfTowardsZero(signBit, adjustedExponent,
-			alignedMantissa)
+			alignedMantissa, lostPrecision)
 	case floatBit.RoundHalfTowardsNegativeInf:
 		resultVal, resultAcc = roundHalfTowardsNegativeInf(signBit,
-			adjustedExponent, alignedMantissa)
+			adjustedExponent, alignedMantissa, lostPrecision)
 	case floatBit.RoundHalfTowardsPositiveInf:
 		resultVal, resultAcc = roundHalfTowardsPositiveInf(signBit,
-			adjustedExponent, alignedMantissa)
+			adjustedExponent, alignedMantissa, lostPrecision)
 	case floatBit.RoundNearestEven:
 		resultVal, resultAcc = roundNearestEven(signBit, adjustedExponent,
-			alignedMantissa)
+			alignedMantissa, lostPrecision)
 	case floatBit.RoundNearestOdd:
 		resultVal, resultAcc = roundNearestOdd(signBit, adjustedExponent,
-			alignedMantissa)
+			alignedMantissa, lostPrecision)
 	}
 
 	return resultVal, resultAcc, floatBit.Fits

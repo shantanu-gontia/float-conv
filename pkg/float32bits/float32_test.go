@@ -214,7 +214,7 @@ func TestRoundTowardsZero(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run("RoundTowardsZero", func(t *testing.T) {
-			resultVal, resultAcc := truncate(tt.signBit, tt.exponentBits, tt.mantissaBits)
+			resultVal, resultAcc := truncate(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
@@ -283,7 +283,7 @@ func TestRoundTowardsPositiveInf(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run("RoundTowardsPositiveInf", func(t *testing.T) {
-			resultVal, resultAcc := roundTowardsPositiveInf(tt.signBit, tt.exponentBits, tt.mantissaBits)
+			resultVal, resultAcc := roundTowardsPositiveInf(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
@@ -351,7 +351,7 @@ func TestRoundTowardsNegativeInf(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run("RoundTowardsNegativeInf", func(t *testing.T) {
-			resultVal, resultAcc := roundTowardsNegativeInf(tt.signBit, tt.exponentBits, tt.mantissaBits)
+			resultVal, resultAcc := roundTowardsNegativeInf(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
@@ -494,7 +494,7 @@ func TestRoundHalfTowardsZero(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run("RoundHalfTowardsZero", func(t *testing.T) {
-			resultVal, resultAcc := roundHalfTowardsZero(tt.signBit, tt.exponentBits, tt.mantissaBits)
+			resultVal, resultAcc := roundHalfTowardsZero(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
@@ -637,7 +637,7 @@ func TestRoundHalfTowardsPositiveInf(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run("RoundHalfTowardsPositiveInf", func(t *testing.T) {
-			resultVal, resultAcc := roundHalfTowardsPositiveInf(tt.signBit, tt.exponentBits, tt.mantissaBits)
+			resultVal, resultAcc := roundHalfTowardsPositiveInf(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
@@ -780,7 +780,7 @@ func TestRoundHalfTowardsNegativeInf(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run("RoundHalfTowardsNegativeInf", func(t *testing.T) {
-			resultVal, resultAcc := roundHalfTowardsNegativeInf(tt.signBit, tt.exponentBits, tt.mantissaBits)
+			resultVal, resultAcc := roundHalfTowardsNegativeInf(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
@@ -961,7 +961,7 @@ func TestRoundNearestEven(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run("RoundHalfTowardsNegativeInf", func(t *testing.T) {
-			resultVal, resultAcc := roundNearestEven(tt.signBit, tt.exponentBits, tt.mantissaBits)
+			resultVal, resultAcc := roundNearestEven(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)
@@ -1134,7 +1134,7 @@ func TestRoundNearestOdd(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run("RoundHalfTowardsNegativeInf", func(t *testing.T) {
-			resultVal, resultAcc := roundNearestOdd(tt.signBit, tt.exponentBits, tt.mantissaBits)
+			resultVal, resultAcc := roundNearestOdd(tt.signBit, tt.exponentBits, tt.mantissaBits, false)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("signBit: %#016x, exponentBits: %#016x, mantissaBits: %#016x", tt.signBit, tt.exponentBits, tt.mantissaBits)

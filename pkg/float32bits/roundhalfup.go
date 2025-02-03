@@ -11,8 +11,10 @@ import (
 // exponentBits must be passed with the float32 bias applied
 // mantissaBits must be passed in their float64 locations.
 // NOTE: This doesn't handle the underflow and overflow cases.
+// The parameter lostPrecision indicates whether the mantissa passed had already
+// lost precision during any preprocessing
 func roundHalfTowardsPositiveInf(signBit, exponentBits,
-	mantissaBits uint64) (Bits, big.Accuracy) {
+	mantissaBits uint64, lostPrecision bool) (Bits, big.Accuracy) {
 
 	mantissaF32Precision := mantissaBits & f64float32MantissaMask
 	mantissaExtraPrecision := mantissaBits & f64float32HalfSubnormalMask
@@ -33,7 +35,7 @@ func roundHalfTowardsPositiveInf(signBit, exponentBits,
 	// In the case that we're halfway through,
 	// We add 1, only if the sign was positive, otherwise we truncate
 	if (mantissaExtraPrecision ==
-		f64float32HalfSubnormalLSB) && (float32Sign == 0) {
+		f64float32HalfSubnormalLSB) && (float32Sign == 0) && !lostPrecision {
 		exponentMantissaComposite += 1
 		addedOne = true
 	}
@@ -45,7 +47,7 @@ func roundHalfTowardsPositiveInf(signBit, exponentBits,
 
 	// Result is larger if the input was positive and we added 1, or
 	// if the input was negative and we truncated.
-	if mantissaExtraPrecision != 0 {
+	if mantissaExtraPrecision != 0 || lostPrecision {
 		resultAcc = big.Below
 		if (float32Sign == 0) == addedOne {
 			resultAcc = big.Above

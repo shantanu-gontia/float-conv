@@ -12,7 +12,10 @@ import (
 // exponentBits must be passed with the float16 bias applied
 // mantissaBits must be passed in their float32 locations.
 // NOTE: This doesn't handle the underflow and overflow cases.
-func roundNearestOdd(signBit, exponentBits, mantissaBits uint32) (Bits,
+// The parameter lostPrecision indicates whether the mantissa passed had already
+// lost precision during any preprocessing
+func roundNearestOdd(signBit, exponentBits, mantissaBits uint32,
+	lostPrecision bool) (Bits,
 	big.Accuracy) {
 
 	// For rounding to nearest even, we round to the number that is closest and
@@ -46,7 +49,7 @@ func roundNearestOdd(signBit, exponentBits, mantissaBits uint32) (Bits,
 	// In the case we're at the mid-point, we only add 1, if the LSB of the
 	// float32 retained mantissa is 0
 	if (mantissaF32LSB == 0) && (mantissaExtraPrecision ==
-		f32Float16HalfSubnormalLSB) {
+		f32Float16HalfSubnormalLSB) && !lostPrecision {
 		exponentMantissaComposite += 1
 		addedOne = true
 	}
@@ -58,7 +61,7 @@ func roundNearestOdd(signBit, exponentBits, mantissaBits uint32) (Bits,
 
 	// Result is larger if the input was positive and we added 1, or
 	// if the input was negative and we truncated.
-	if mantissaExtraPrecision != 0 {
+	if mantissaExtraPrecision != 0 || lostPrecision {
 		resultAcc = big.Below
 		if (float16Sign == 0) == addedOne {
 			resultAcc = big.Above

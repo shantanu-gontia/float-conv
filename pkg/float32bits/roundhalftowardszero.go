@@ -9,8 +9,10 @@ import "math/big"
 // exponentBits must be passed with the float32 bias applied
 // mantissaBits must be passed in their float64 locations.
 // NOTE: This doesn't handle the underflow and overflow cases.
+// The parameter lostPrecision indicates whether the mantissa passed had already
+// lost precision during any preprocessing
 func roundHalfTowardsZero(signBit, exponentBits,
-	mantissaBits uint64) (Bits, big.Accuracy) {
+	mantissaBits uint64, lostPrecision bool) (Bits, big.Accuracy) {
 
 	mantissaF32Precision := mantissaBits & f64float32MantissaMask
 	mantissaExtraPrecision := mantissaBits & f64float32HalfSubnormalMask
@@ -30,13 +32,18 @@ func roundHalfTowardsZero(signBit, exponentBits,
 		addedOne = true
 	}
 
+	if mantissaExtraPrecision == f64float32HalfSubnormalLSB && lostPrecision {
+		exponentMantissaComposite += 1
+		addedOne = true
+	}
+
 	// All we need to do now is attach the sign
 	resultVal := Bits(float32Sign | exponentMantissaComposite)
 	resultAcc := big.Exact
 
 	// Result is larger if the input was positive and we added 1, or
 	// if the input was negative and we truncated.
-	if mantissaExtraPrecision != 0 {
+	if mantissaExtraPrecision != 0 || lostPrecision {
 		resultAcc = big.Below
 		if (float32Sign == 0) == addedOne {
 			resultAcc = big.Above
