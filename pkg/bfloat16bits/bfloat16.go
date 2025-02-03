@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"math/big"
+	"slices"
 
 	floatBit "github.com/shantanu-gontia/float-conv/pkg"
 	F32 "github.com/shantanu-gontia/float-conv/pkg/float32bits"
@@ -297,6 +298,7 @@ func (b *Bits) ToFloatFormat() floatBit.FloatBitFormat {
 		mantissaRetVal = append(mantissaRetVal, valueToAppend)
 		mantissaBits >>= 1
 	}
+	slices.Reverse(mantissaRetVal)
 
 	return floatBit.FloatBitFormat{Sign: signRetVal,
 		Exponent: exponentRetVal, Mantissa: mantissaRetVal}

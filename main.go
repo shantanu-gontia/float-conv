@@ -10,6 +10,7 @@ import (
 
 	floatBit "github.com/shantanu-gontia/float-conv/pkg"
 	BF16 "github.com/shantanu-gontia/float-conv/pkg/bfloat16bits"
+	F16 "github.com/shantanu-gontia/float-conv/pkg/float16bits"
 	F32 "github.com/shantanu-gontia/float-conv/pkg/float32bits"
 )
 
@@ -125,6 +126,45 @@ func handleBFloat16(bf *big.Float, rm floatBit.RoundingMode, om floatBit.Overflo
 
 	// Get the BFloat16 Value
 	floatVal, accuracy, status := BF16.FromBigFloat(*bf, rm, om, um)
+
+	// Print the bits in a table
+	fmt.Print(floatVal.ToFloatFormat().AsTable())
+
+	// Print the decimal value
+	asBigFloat := floatVal.ToBigFloat()
+	fmt.Printf("Decimal: %s\n", asBigFloat.Text('e', -1))
+
+	// Print the hexfloat value
+	fmt.Printf("Hexfloat: %x\n", floatVal.ToFloat32())
+
+	// Print the conversion error
+	conv, err := floatVal.ConversionError(bf)
+	var convStr string
+	if err == nil {
+		convStr = conv.Text('e', -1)
+	} else {
+		convStr = "NaN"
+	}
+	fmt.Printf("Conversion Error: %s (%s)\n", convStr, accuracy)
+
+	// Print the bits in binary
+	fmt.Printf("Binary: %0#16b\n", floatVal)
+
+	// Print the bits in hexadecimal
+	fmt.Printf("Hexadecimal: %0#4x\n", floatVal)
+
+	if status != floatBit.Fits {
+		fmt.Printf("%s\n", strings.ToUpper(status.String()))
+	}
+}
+
+// Call the appropriate functions and methods required to put together the information to print for BF16
+func handleFloat16(bf *big.Float, rm floatBit.RoundingMode, om floatBit.OverflowMode, um floatBit.UnderflowMode) {
+	// First we print the type
+	fmt.Println("Float16")
+
+	// Get the Float16 Value
+	floatVal, accuracy, status := F16.FromBigFloat(*bf, rm, om, um)
 
 	// Print the bits in a table
 	fmt.Print(floatVal.ToFloatFormat().AsTable())
