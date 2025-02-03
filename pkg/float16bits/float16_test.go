@@ -1224,7 +1224,7 @@ func TestRoundNearestEven(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		t.Run("RoundHalfTowardsNegativeInf", func(t *testing.T) {
+		t.Run("RoundNearestEven", func(t *testing.T) {
 			resultVal, resultAcc := roundNearestEven(tt.signBit, tt.exponentBits, tt.mantissaBits, tt.lostPrecision)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
@@ -1417,7 +1417,7 @@ func TestRoundNearestOdd(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		t.Run("RoundHalfTowardsNegativeInf", func(t *testing.T) {
+		t.Run("RoundNearestOdd", func(t *testing.T) {
 			resultVal, resultAcc := roundNearestOdd(tt.signBit, tt.exponentBits, tt.mantissaBits, tt.lostPrecision)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")

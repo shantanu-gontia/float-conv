@@ -933,7 +933,7 @@ func TestRoundHalfTowardsNegativeInf(t *testing.T) {
 			signBit:       0x1,
 			exponentBits:  0x0,
 			mantissaBits:  0b0_00000000000_00000000000000000000001_10000000000000000000000000000,
-			lostPrecision: false,
+			lostPrecision: true,
 			goldenVal:     0b1_00000000_00000000000000000000010,
 			goldenAcc:     big.Below,
 		},
@@ -941,7 +941,7 @@ func TestRoundHalfTowardsNegativeInf(t *testing.T) {
 			signBit:       0x0,
 			exponentBits:  0x0,
 			mantissaBits:  0b0_00000000000_00000000000000000000001_10000000000000000000000000000,
-			lostPrecision: false,
+			lostPrecision: true,
 			goldenVal:     0b0_00000000_00000000000000000000010,
 			goldenAcc:     big.Above,
 		},
@@ -1167,7 +1167,7 @@ func TestRoundNearestEven(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		t.Run("RoundHalfTowardsNegativeInf", func(t *testing.T) {
+		t.Run("RoundNearestEven", func(t *testing.T) {
 			resultVal, resultAcc := roundNearestEven(tt.signBit, tt.exponentBits, tt.mantissaBits, tt.lostPrecision)
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) {
 				t.Logf("Failed Input Set:\n")
