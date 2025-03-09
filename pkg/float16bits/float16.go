@@ -85,7 +85,7 @@ func (input Bits) ToFloat32() float32 {
 		// = (-1)^sign * 2^(-15) * (1 + m1/2 + m2/4 + m3/8 + ...)
 		// So, if the MSB set bit is m0, then the result exponent = Emin - 1
 		// and, we need to shift the mantissa to the right when it's in the
-		// float32 container. And, there as an extra mantissa left-shift by
+		// float32 container. And, there is an extra mantissa left-shift by
 		// 1
 		// Let's now say it's m2. In that case, we have
 		// (-1)^sign * 2^(-14) * (0/2 + 0/4 + 1/8 + m3/16 + ...)
