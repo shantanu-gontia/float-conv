@@ -38,7 +38,7 @@ func TestToFloat32(t *testing.T) {
 		},
 		{
 			input:  0b1_00000_0000000000,
-			golden: -0.0,
+			golden: math.Float32frombits(F32.NegativeZero),
 		},
 		{
 			input:  0b0_00000_1111111111,
@@ -400,8 +400,8 @@ func TestRoundTowardsPositiveInf(t *testing.T) {
 
 func TestRoundTowardsNegativeInf(t *testing.T) {
 
-	// Rounding towards positive infinity involves adding 1 if the number
-	// is positive, otherwise truncating, so that the number is closer to +inf
+	// Rounding towards negative infinity involves adding 1 if the number
+	// is negative, otherwise truncating, so that the number is closer to -inf
 
 	testCases := []struct {
 		// Inputs
@@ -1021,7 +1021,7 @@ func TestRoundHalfTowardsNegativeInf(t *testing.T) {
 func TestRoundNearestEven(t *testing.T) {
 	// Rounding half towards positive infinity involves rounding to the nearest
 	// representable number, and breaking ties by rounding towards the
-	// number closer to +inf
+	// number with LSB = 0
 
 	testCases := []struct {
 		// Inputs
@@ -1240,7 +1240,7 @@ func TestRoundNearestEven(t *testing.T) {
 func TestRoundNearestOdd(t *testing.T) {
 	// Rounding half towards positive infinity involves rounding to the nearest
 	// representable number, and breaking ties by rounding towards the
-	// number closer to +inf
+	// number with LSB = 1
 
 	testCases := []struct {
 		// Inputs

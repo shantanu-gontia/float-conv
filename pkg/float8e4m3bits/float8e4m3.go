@@ -1,10 +1,13 @@
 package F8E4M3
 
 import (
-    "math"
-    "math/big"
-    floatBit "github.com/shantanu-gontia/float-conv/pkg"
-    F32 "github.com/shantanu-gontia/float-conv/pkg/float32bits"
+	"errors"
+	"math"
+	"math/big"
+	"slices"
+
+	floatBit "github.com/shantanu-gontia/float-conv/pkg"
+	F32 "github.com/shantanu-gontia/float-conv/pkg/float32bits"
 )
 
 // Some constants that will help with bit manipulation we'll need to
@@ -39,7 +42,7 @@ type Bits uint8
 // number is out of the range supported by the format, then the result is
 // undefined per the spec. In our case, we clamp to Infinity of the same sign
 // as the original number
-type ScaleFactor int8
+type ScaleFactor uint8
 
 // Convert the given [Bits] type to the floating point number it represents,
 // inside a float32 value. This is effectively, a bit_cast to float8e4m3,
@@ -53,6 +56,14 @@ func (input Bits) ToFloat32(scaleFactor ScaleFactor) float32 {
     signBit := (asUint8 & SignMask) >> 7
     exponentBits := (asUint8 & ExponentMask) >> 3
     mantissaBits := (asUint8 & MantissaMask)
+
+    // in F8E8M0, 255 signals NaN
+    if (scaleFactor == 255) {
+        if (signBit == 0) {
+            return math.Float32frombits(F32.PositiveNaN)
+        }
+        return math.Float32frombits(F32.NegativeNaN)
+    }
 
     // Special Values like Inf, NaN etc. need to be handled before applying
     // the general algorithm to calculate the number
@@ -142,7 +153,164 @@ func (input Bits) ToFloat32(scaleFactor ScaleFactor) float32 {
         float32MantissaBits)
 }
 
-func handleOverflow(signBit uint32, om floatBit.OverflowMode) (Bits,
-    big.Accuracy, floatBit.Status) {
+// Convert the given [Bits] type to a [big.Float] arbitrary precision
+// floating-point number with the given scale factor (Note that
+// this works by intermediate conversion to float32, so if the number
+// is not representable in float32 with the given scale factor, the result
+// is same as what would be after conversion to float32
+func (input Bits) ToBigFloat(scaleFactor ScaleFactor) big.Float {
+    asFloat32 := input.ToFloat32(scaleFactor)
+    asBigFloat := *big.NewFloat(float64(asFloat32))
+    return asBigFloat
+}
+
+// Convert the given [big.Float] arbitrary-precison floating-point number
+// to a [Bits] type representing the bits of a float8e4m3 number. The input
+// is scaled by the given scaleFactor. If the number cannot be represented
+// in the float8e4m3 format exactly, then the rounding mode, overflow mode,
+// and underflow mode decide the result. Returns the result [Bits],
+// a [big.Accuracy] which encodes whether the result value was the same,
+// larger, or smaller than the input, and a [floatBit.Status] which encodes,
+// whether the result ft in the [Bits], caused overflow, or underflow.
+func FromBigFloat(input big.Float, scaleFactor ScaleFactor,
+    rm floatBit.RoundingMode, om floatBit.OverflowMode,
+    um floatBit.UnderflowMode) (Bits, big.Accuracy, floatBit.Status) {
     return Bits(0), big.Exact, floatBit.Fits
 }
+
+// Convert the given float32 number into a [Bits] type which represents the
+// bits of a OCP MXFP8E4M3 number. Signature and usage is identical to
+// [FromBigFloat] except the input is a float32
+func FromFloat32(input float32, scaleFactor ScaleFactor,
+    rm floatBit.RoundingMode, om floatBit.OverflowMode,
+    um floatBit.UnderflowMode) (Bits, big.Accuracy, floatBit.Status) {
+    return Bits(0), big.Exact, floatBit.Fits
+}
+
+// Utility function to check if the number with the given exponent and mantissa
+// bits would overflow when trying to represent it in a float8e4m3 value
+// with the given scale factor.
+// mantissaBits should occupy the bits as they would in a float32 number
+func checkOverflow(actualExponent int, mantissaBits uint32,
+    scaleFactor ScaleFactor) bool {
+
+    // Remove the scaling
+    scaledExponent := actualExponent - (int(scaleFactor) - 127)
+
+    if scaledExponent > ExponentMax {
+        return true
+    }
+
+    // If the exponent is equal to the maximum exponent, and all the float32
+    // mantissa bits are set, but there is additional precision in the number
+    // than can be represented in float32, then it exceeds the maximum normal
+    // and so, overflows.
+    if (scaledExponent == ExponentMax) &&
+        (mantissaBits & 0b0_00000000_11000000000000000000000 ==
+        0b0_00000000_11000000000000000000000) && 
+        (mantissaBits & f32Float8E4M3SubnormalMask > 0){
+        return true
+    }
+    return false
+}
+
+// Utility function to check if the number with the given exponent and mantissa
+// bits would underflow when trying to represent it in a float8e4m3 value
+// with the given scaleFactor. Subnormals require shifting the mantissa to
+// align the exponents. This might cause loss of precision that cannot be
+// detected by the mantissaBits alone as they are already shifted. The
+// lostPrecision parameter helps us with that. If it's set to true then there
+// was precision lost when the mantissa was being aligned.
+func checkUnderflow(mantissaBits uint32, lostPrecision bool) bool {
+    // This assumes that the exponent after scaling  is 0, so any extra 
+    // precision in the mantissa means underflow
+    f8e4m3PrecisionMantissa := mantissaBits & f32Float8E4M3MantissaMask
+    f8e4m3ExtraPrecisionMantissa := mantissaBits & 
+        f32Float8E4M3HalfSubnormalMask
+    if f8e4m3PrecisionMantissa == 0 && (f8e4m3ExtraPrecisionMantissa != 0 ||
+        lostPrecision) {
+        return true
+    }
+    return false
+}
+
+// ToFloatFormat converts the given [Bits] type representing the bits that
+// make up a OCP MXFP8E4M3 umber into [floatBit.FloatBitFormat]
+// Implements the FloatBitFormatter interface
+func (b* Bits) ToFloatFormat() floatBit.FloatBitFormat {
+    // Iterate over the bits and construct the return values
+
+    asUint := uint8(*b)
+    signBits := (asUint & SignMask) >> 7
+    exponentBits := (asUint & ExponentMask) >> 3
+    mantissaBits := (asUint & MantissaMask)
+
+    // 1 Sign Bit
+    signRetVal := make([]byte, 0, 1)
+    if signBits == 0 {
+        signRetVal = append(signRetVal, byte('0'))
+    } else {
+        signRetVal = append(signRetVal, byte('1'))
+    }
+
+    // 4 Exponent Bits
+    exponentRetVal := make([]byte, 0, 4)
+    for range 5 {
+        currentExponentBit := exponentBits & 0x1
+        var valueToAppend byte
+        if currentExponentBit == 0 {
+            valueToAppend = '0'
+        } else {
+            valueToAppend = '1'
+        }
+        exponentRetVal = append(exponentRetVal, valueToAppend)
+        exponentBits >>= 1
+    }
+
+    // 3 Mantissa Bits
+    mantissaRetVal := make([]byte, 0, 3)
+    for range 3 {
+        currentMantissaBit := mantissaBits & 0x1
+        var valueToAppend byte
+        if currentMantissaBit == 0 {
+            valueToAppend = '0'
+        } else {
+            valueToAppend = '1'
+        }
+        mantissaRetVal = append(mantissaRetVal, valueToAppend)
+        mantissaBits >>= 1
+    }
+    slices.Reverse(mantissaRetVal)
+
+    return floatBit.FloatBitFormat{Sign: signRetVal, Exponent: exponentRetVal,
+    Mantissa: mantissaRetVal}
+}
+
+// Conversion error returns the difference between the input [big.Float]
+// number and the float8e4m3 number represented by the bits in the [Bits]
+// receiver when it's scaled with the given scale factor
+func (b* Bits) ConversionError(input* big.Float, scaleFactor ScaleFactor) (
+    big.Float, error) {
+    // If the receiver is a NaN then we return an error
+    asFloat32 := b.ToFloat32(scaleFactor)
+    if math.IsNaN(float64(asFloat32)) {
+        return *big.NewFloat(0.0), errors.New("NaN encountered")
+    }
+
+    // Positive Infinity == Positiive Infinity
+    if math.IsInf(float64(asFloat32), 1) && 
+        (input.IsInf() && input.Sign() > 0) {
+        return *big.NewFloat(0), nil
+    }
+
+    // Negative Infinity == Negative Infinity
+    if math.IsInf(float64(asFloat32), -1) &&
+        (input.IsInf() && input.Sign() < 0) {
+        return *big.NewFloat(0), nil
+    }
+
+    asBigFloat := b.ToBigFloat(scaleFactor)
+    convDiff := asBigFloat.Sub(&asBigFloat, input)
+    return *convDiff, nil
+}
+

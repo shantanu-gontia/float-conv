@@ -1,1 +1,59 @@
 package F8E4M3
+
+import "math/big"
+
+// Utility function that returns the number rounded to the closest float8e4m3
+// value. Ties are broken by rounding to the value closest to zero (truncation)
+// signBit, and exponentBits must be passed with their values shifted all the
+// way to the right.
+// exponentBits must be passed with the float8e4m3 bias and appropriate
+// scale-factor applied
+// mantissaBits must be passed in their float32 locations.
+// NOTE: This doesn't handle the underflow and overflow cases.
+// The parameter lostPrecision indicates whether the mantissa passed had already
+// lost precision during any preprocessing
+func roundHalfTowardsZero(signBit, exponentBits,
+	mantissaBits uint32, lostPrecision bool) (Bits, big.Accuracy) {
+    
+    mantissaF8E4M3Precision := mantissaBits & f32Float8E4M3MantissaMask
+    mantissaExtraPrecision := mantissaBits & f32Float8E4M3HalfSubnormalMask
+
+    float8E4M3Sign := uint8(signBit << 7)
+    float8E4M3Exponent := uint8(exponentBits << 3)
+    float8E4M3Mantissa := uint8(mantissaF8E4M3Precision >> 20)
+
+    exponentMantissaComposite := float8E4M3Exponent | float8E4M3Mantissa
+
+    // If the extra precision bits exceed 1 0 0 0 ...
+    // we need to add 1 to the LSB of the f32 mantissa.
+    // For all other cases we truncate
+    addedOne := false
+    if mantissaExtraPrecision > f32Float8E4M3HalfSubnormalLSB {
+        exponentMantissaComposite += 1
+        addedOne = true
+    }
+
+    // If extra precision was lost before, then we need to add 1 if we're
+    // halfway through in the adjusted mantissa (because this means we're
+    // actually greater than the midpoint)
+    if mantissaExtraPrecision == f32Float8E4M3HalfSubnormalLSB &&
+        lostPrecision {
+        exponentMantissaComposite += 1
+        addedOne = true
+    }
+
+    // All we need to do now is attach the sign
+    resultVal := Bits(float8E4M3Sign | exponentMantissaComposite)
+    resultAcc := big.Exact
+
+    // Result is larger if the input was positive and we added 1, or
+    // if the input was negative and we truncated
+    if mantissaExtraPrecision != 0 || lostPrecision {
+        resultAcc = big.Below
+        if (float8E4M3Sign == 0) == addedOne {
+            resultAcc = big.Above
+        }
+    }
+
+    return resultVal, resultAcc
+}

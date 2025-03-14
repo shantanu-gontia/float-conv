@@ -24,7 +24,7 @@ func roundHalfTowardsZero(signBit, exponentBits,
 	exponentMantissaComposite := float16Exponent | float16Mantissa
 
 	// If the extra precision bits exceed 1 0 0 0 0....
-	// we need to add 1 to LSB of F32 mantissa, otherwise truncate
+	// we need to add 1 to LSB of F32 mantissa.
 	// For all other cases we truncate
 	addedOne := false
 	if mantissaExtraPrecision > f32Float16HalfSubnormalLSB {

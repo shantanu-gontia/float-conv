@@ -181,7 +181,7 @@ func FromBigFloat(input big.Float, rm floatBit.RoundingMode,
 		// the underflow response in the BF16 methods.
 		// F32.PositiveMinSubnormal will trigger underflow response in BF16
 		asFloat32 = math.Float32frombits(F32.PositiveMinSubnormal)
-	} else if closestFloat32 == -0.0 && fromBigFloatAcc == big.Above {
+	} else if closestFloat32 == math.Float32frombits(F32.NegativeZero) && fromBigFloatAcc == big.Above {
 		// And for the negative case
 		// F32.NegativeMinSubnormal will trigger underflow response in BF16
 		asFloat32 = math.Float32frombits(F32.NegativeMinSubnormal)
@@ -386,9 +386,7 @@ func FromFloat32(input float32, rm floatBit.RoundingMode,
 
 // Utility function to check if the number with the given exponent and mantissa
 // bits would overflow when trying to represent it in a float16 value
-// exponentBits should correspond to bits which are encoded with the float16
-// bias in mind. mantissaBits should occupy the bits with the float32 format
-// in mind.
+// mantissaBits should occupy the bits as they would in a float32 number
 func checkOverflow(actualExponent int, mantissaBits uint32) bool {
 	// If the exponent is larger than the max, then it's overflow
 	if actualExponent > ExponentMax {
@@ -408,11 +406,11 @@ func checkOverflow(actualExponent int, mantissaBits uint32) bool {
 }
 
 // Utility function to check if the number with the given exponent and mantissa
-// bits would overflow when trying to represent it in a float16 value
+// bits would underflow when trying to represent it in a float16 value
 // Subnormals require shifting the mantissa to align the exponents. This might
 // cause loss of precision that cannot be detected by mantissaBits alone as
 // they are already shifted. The lostPrecision parameter helps us with that.
-// If it's true then there was precision lost when mantissa was being aligned
+// If it's true then there was precision lost when mantissa was being aligned.
 func checkUnderflow(mantissaBits uint32, lostPrecision bool) bool {
 	// This assumes that the exponent is 0, so any extra precision in the
 	// mantissa means underflow.
@@ -496,7 +494,7 @@ func (b *Bits) ToFloatFormat() floatBit.FloatBitFormat {
 
 	// 5 Exponent Bits
 	exponentRetVal := make([]byte, 0, 5)
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		currentExponentBit := exponentBits & 0x1
 		var valueToAppend byte
 		if currentExponentBit == 0 {
@@ -510,7 +508,7 @@ func (b *Bits) ToFloatFormat() floatBit.FloatBitFormat {
 
 	// 10 Mantissa Bits
 	mantissaRetVal := make([]byte, 0, 10)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		currentMantissaBit := mantissaBits & 0x1
 		var valueToAppend byte
 		if currentMantissaBit == 0 {

@@ -19,12 +19,12 @@ func roundNearestEven(signBit, exponentBits, mantissaBits uint32,
 	// break ties by rounding towards the number that is even (LSB is 0)
 
 	// LSB  |  Extra Precision Bits
-	//  m9    m8 m8 m7
-	// 1. if m29 m28 m27 ... > 1 0 0 0 ... (more than half) we round up
-	// 2. if m29 m28 m27 ... < 1 0 0 0 ... (less than half) we truncate
-	// 3. if m29 m28 m27 ... == 1 0 0 0 ... (exactly half), then
-	// 	  3.1 m30 == 0, we truncate
-	//    3.2 m30 == 1, we round up
+	// m13    m12 m11 m10 ... m0
+	// 1. if m12 m11 m10 ... > 1 0 0 0 ... (more than half) we round up
+	// 2. if m12 m11 m10 ... < 1 0 0 0 ... (less than half) we truncate
+	// 3. if m12 m11 m10 ... == 1 0 0 0 ... (exactly half), then
+	// 	  3.1 m13 == 0, we truncate
+	//    3.2 m13 == 1, we round up
 
 	mantissaF16Precision := mantissaBits & f32Float16MantissaMask
 	mantissaExtraPrecision := mantissaBits & f32Float16HalfSubnormalMask
