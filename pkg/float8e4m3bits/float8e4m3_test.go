@@ -7,13 +7,14 @@ import (
 
 	floatBit "github.com/shantanu-gontia/float-conv/pkg"
 	F32 "github.com/shantanu-gontia/float-conv/pkg/float32bits"
+	F8E8M0 "github.com/shantanu-gontia/float-conv/pkg/float8e8m0"
 )
 
 func TestToFloat32(t *testing.T) {
     testCases := []struct{
         // Input
         input Bits
-        scaleFactor ScaleFactor
+        scaleFactor F8E8M0.ScaleFactor
         // Output
         golden float32
     }{
@@ -125,7 +126,7 @@ func TestCheckOverflow(t* testing.T) {
         // Inputs
         actualExponent int
         mantissaBits uint32
-        scaleFactor ScaleFactor
+        scaleFactor F8E8M0.ScaleFactor
         // Outputs
         golden bool
     }{
@@ -209,6 +210,70 @@ func TestCheckUnderflow(t* testing.T) {
             t.Errorf("Expected: %v, Got: %v", tt.golden, result)
         }
     }
+}
+
+func TestHandleOverflow(t *testing.T) {
+	testCases := []struct {
+		// In
+		signBit uint32
+		om      floatBit.OverflowMode
+		// Out
+		goldenVal    Bits
+		goldenAcc    big.Accuracy
+		goldenStatus floatBit.Status
+	}{
+		{0, floatBit.SaturateInf, Bits(PositiveNaN), big.Above, floatBit.Overflow},
+		{1, floatBit.SaturateInf, Bits(NegativeNaN), big.Below, floatBit.Overflow},
+		{200, floatBit.SaturateInf, Bits(NegativeNaN), big.Below, floatBit.Overflow},
+		{0, floatBit.SaturateMax, Bits(PositiveMaxNormal), big.Below, floatBit.Overflow},
+		{1, floatBit.SaturateMax, Bits(NegativeMaxNormal), big.Above, floatBit.Overflow},
+		{200, floatBit.SaturateMax, Bits(NegativeMaxNormal), big.Above, floatBit.Overflow},
+	}
+
+	for _, tt := range testCases {
+		t.Run("HandleOverflow", func(t *testing.T) {
+			resultVal, resultAcc, resultStatus := handleOverflow(tt.signBit, tt.om)
+			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) || (resultStatus != tt.goldenStatus) {
+				t.Logf("Failed Input Set:\n")
+				t.Logf("SignBit: %v\tOverflowMode: %v\n", tt.signBit, tt.om)
+				t.Errorf("Expected Result: %0#2x, Got: %0#2x\n", tt.goldenVal, resultVal)
+				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
+				t.Errorf("Expected Status: %v, Got: %v\n", tt.goldenStatus, resultStatus)
+			}
+		})
+	}
+}
+
+func TestHandleUnderflow(t *testing.T) {
+	testCases := []struct {
+		// In
+		signBit uint32
+		um      floatBit.UnderflowMode
+		// Out
+		goldenVal    Bits
+		goldenAcc    big.Accuracy
+		goldenStatus floatBit.Status
+	}{
+		{0, floatBit.FlushToZero, Bits(PositiveZero), big.Below, floatBit.Underflow},
+		{1, floatBit.FlushToZero, Bits(NegativeZero), big.Above, floatBit.Underflow},
+		{200, floatBit.FlushToZero, Bits(NegativeZero), big.Above, floatBit.Underflow},
+		{0, floatBit.SaturateMin, Bits(PositiveMinSubnormal), big.Above, floatBit.Underflow},
+		{1, floatBit.SaturateMin, Bits(NegativeMinSubnormal), big.Below, floatBit.Underflow},
+		{200, floatBit.SaturateMin, Bits(NegativeMinSubnormal), big.Below, floatBit.Underflow},
+	}
+
+	for _, tt := range testCases {
+		t.Run("HandleUnderflow", func(t *testing.T) {
+			resultVal, resultAcc, resultStatus := handleUnderflow(tt.signBit, tt.um)
+			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) || (resultStatus != tt.goldenStatus) {
+				t.Logf("Failed Input Set:\n")
+				t.Logf("SignBit: %v\tUnderflowMode: %v\n", tt.signBit, tt.um)
+				t.Errorf("Expected Result: %0#2x, Got: %0#2x\n", tt.goldenVal, resultVal)
+				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
+				t.Errorf("Expected Status: %v, Got: %v\n", tt.goldenStatus, resultStatus)
+			}
+		})
+	}
 }
 
 func TestRoundTowardsPositiveInf(t *testing.T) {
@@ -1376,7 +1441,7 @@ func TestFromBigFloat(t* testing.T) {
 		name string
 		// Inputs
 		input big.Float
-        scaleFactor ScaleFactor
+        scaleFactor F8E8M0.ScaleFactor
 		rm    floatBit.RoundingMode
 		um    floatBit.UnderflowMode
 		om    floatBit.OverflowMode
@@ -1385,6 +1450,7 @@ func TestFromBigFloat(t* testing.T) {
 		goldenAcc    big.Accuracy
 		goldenStatus floatBit.Status
 	}{
+
     }
 
     for _, tt := range testCases {

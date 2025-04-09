@@ -8,6 +8,7 @@ import (
 
 	floatBit "github.com/shantanu-gontia/float-conv/pkg"
 	F32 "github.com/shantanu-gontia/float-conv/pkg/float32bits"
+	F8E8M0 "github.com/shantanu-gontia/float-conv/pkg/float8e8m0"
 )
 
 // Some constants that will help with bit manipulation we'll need to
@@ -32,25 +33,13 @@ const (
 // responses
 type Bits uint8
 
-// Alias type for uint8. This is used to represent the FP8E8M0 format which
-// is used to specify the scale factor for a OCP MXFP8 floating point format.
-// The actual floating point represented by an OCP MXPF8 number is the
-// value encoded in the bits scaled by 2^(scale_factor) when scale_factor
-// is interpreted as an fp8e8m0 number. For example, to apply no scaling,
-// the number passed must be 127, because the actual scale that is
-// multiplied is 2^(scale_factor - 127). If the exponent in the resulting
-// number is out of the range supported by the format, then the result is
-// undefined per the spec. In our case, we clamp to Infinity of the same sign
-// as the original number
-type ScaleFactor uint8
-
 // Convert the given [Bits] type to the floating point number it represents,
 // inside a float32 value. This is effectively, a bit_cast to float8e4m3,
 // followed by a upcast to float32. Since Go doesn't natively support
 // float8e4m3 values, this method performs some bit-twiddling, 
 // to align the bits per the float32 bit representation and then scaling
-// the final result with the [ScaleFactor]
-func (input Bits) ToFloat32(scaleFactor ScaleFactor) float32 {
+// the final result with the [F8E8M0.ScaleFactor]
+func (input Bits) ToFloat32(scaleFactor F8E8M0.ScaleFactor) float32 {
     asUint8 := uint8(input)
     // Extract the Sign, Exponent and Mantissa
     signBit := (asUint8 & SignMask) >> 7
@@ -158,7 +147,7 @@ func (input Bits) ToFloat32(scaleFactor ScaleFactor) float32 {
 // this works by intermediate conversion to float32, so if the number
 // is not representable in float32 with the given scale factor, the result
 // is same as what would be after conversion to float32
-func (input Bits) ToBigFloat(scaleFactor ScaleFactor) big.Float {
+func (input Bits) ToBigFloat(scaleFactor F8E8M0.ScaleFactor) big.Float {
     asFloat32 := input.ToFloat32(scaleFactor)
     asBigFloat := *big.NewFloat(float64(asFloat32))
     return asBigFloat
@@ -172,31 +161,268 @@ func (input Bits) ToBigFloat(scaleFactor ScaleFactor) big.Float {
 // a [big.Accuracy] which encodes whether the result value was the same,
 // larger, or smaller than the input, and a [floatBit.Status] which encodes,
 // whether the result ft in the [Bits], caused overflow, or underflow.
-func FromBigFloat(input big.Float, scaleFactor ScaleFactor,
+func FromBigFloat(input big.Float, scaleFactor F8E8M0.ScaleFactor,
     rm floatBit.RoundingMode, om floatBit.OverflowMode,
     um floatBit.UnderflowMode) (Bits, big.Accuracy, floatBit.Status) {
-    return Bits(0), big.Exact, floatBit.Fits
+
+    // Since the [big] package's methods do not support rounding modes for
+    // direct conversion to float8e4m3. We convert to an intermediate float32
+    // number and use our custom conversion function [FromFloat32] to convert
+    // to [Bits]
+    input.SetMode(big.ToZero)
+    closestFloat32, fromBigFloatAcc := input.Float32()
+
+    var asFloat32 float32
+    // [big.Float.Float32] returns the float32 closest to the input.
+    // This might cause it round UP for some cases.
+    // But, we need to get the value with extra precision truncated.
+    // To get the truncated result, we need to subtract 1 ULP of
+    // precision if the number is positive and the float32 is larger,
+    // or if the number is negative and the float32 is smaller, or
+    // alternatively if [big.Float.Float32] returns [big.Above] as the
+    // accuracy, because for truncation this should always be [big.Below]
+
+    // Note that however, we need to exempt the case where the results
+    // become infinity because that counts not as rounding but overflow.
+    if math.IsInf(float64(closestFloat32), 1) && fromBigFloatAcc == big.Above {
+        // if the input was greater then the float32 maximum normal, then
+        // closestFloat32 would be +inf, and the accuracy returned would be
+        // [big.Above]. To pass through the overflow handling to
+        // [FromFloat32], we thus cap the infinities to the maximum normal
+        // numbers in float32.
+        // F32.PositiveMaxNormal will trigger overflow response
+        // in F8E4M3
+        asFloat32 = math.Float32frombits(F32.PositiveMaxNormal)
+    } else if math.IsInf(float64(closestFloat32), -1) && fromBigFloatAcc == big.Below {
+        asFloat32 = math.Float32frombits(F32.NegativeMaxNormal)
+    } else if closestFloat32 == 0.0 && fromBigFloatAcc == big.Below {
+        // Similar to the infinity case, we also need to make sure that the
+        // underflow response handling is passed through to [FromFloat32].
+        // So, if the closest float32 number results in 0 and the accuracy is
+        // big.Below or +ve numbers, then we just pass in F32.PositiveMinSubnormal
+        // which will trigger underflow in [FromFloat32]
+        asFloat32 = math.Float32frombits(F32.PositiveMinSubnormal)
+    } else if closestFloat32 == math.Float32frombits(F32.NegativeZero) &&
+        fromBigFloatAcc == big.Above {
+        asFloat32 = math.Float32frombits(F32.NegativeMinSubnormal)
+    } else if (input.Sign() > 0 && fromBigFloatAcc == big.Above) ||
+        (input.Sign() < 0 && fromBigFloatAcc == big.Below) {
+        // For positive numbers if the accuracy was [big.Above], then
+        // [big.Float.Float32] caused rounding away from zero. This is 
+        // undesirable. To make it truncation we need to subtract 1 ULP
+        // from the number
+        closestFloat32Bits := math.Float32bits(closestFloat32)
+        asFloat32 = math.Float32frombits(closestFloat32Bits - 1)
+    } else {
+        asFloat32 = closestFloat32
+    }
+
+    resultBits, resultAcc, resultStatus := FromFloat32(asFloat32, scaleFactor,
+        rm, om, um)
+    return resultBits, resultAcc, resultStatus
 }
+
 
 // Convert the given float32 number into a [Bits] type which represents the
 // bits of a OCP MXFP8E4M3 number. Signature and usage is identical to
 // [FromBigFloat] except the input is a float32
-func FromFloat32(input float32, scaleFactor ScaleFactor,
+func FromFloat32(input float32, scaleFactor F8E8M0.ScaleFactor,
     rm floatBit.RoundingMode, om floatBit.OverflowMode,
     um floatBit.UnderflowMode) (Bits, big.Accuracy, floatBit.Status) {
-    return Bits(0), big.Exact, floatBit.Fits
+
+    // we need to access the underlying bits of the float32 number
+    asUint32 := math.Float32bits(input)
+
+    // With the number interpreted as uint32, we can now extract the underlying
+    // sign, exponent, and mantissa bits
+    signBit := (asUint32 & F32.SignMask) >> 31
+    exponentBits := (asUint32 & F32.ExponentMask) >> 23
+    mantissaBits := asUint32 & F32.MantissaMask
+
+    // Special Case #1:
+    // scaleFactor is NaN. Then the result is also NaN
+    if scaleFactor == F8E8M0.NaN {
+        if signBit == 0 {
+            return Bits(PositiveNaN), big.Exact, floatBit.Overflow
+        }
+        return Bits(NegativeNaN), big.Exact, floatBit.Overflow
+    }
+
+    // Special Case #2: Infinities -> NaN
+    // F8E8M0 does not have infinites, so we return a NaN
+    // and overflow
+    if math.IsInf(float64(input), 1) {
+        return Bits(PositiveNaN), big.Below, floatBit.Overflow
+    }
+    if math.IsInf(float64(input), -1) {
+        return Bits(NegativeNaN), big.Above, floatBit.Overflow
+    }
+
+    // Special Case #3: NaN
+    // NaNs always convert to NaNs. For our case,we consider the conversion
+    // to be exact
+    if math.IsNaN(float64(input)) {
+        return Bits(NaN), big.Exact, floatBit.Fits
+    }
+
+    // Special Case #4: Zeros
+    if asUint32 == F32.PositiveZero {
+        return Bits(PositiveZero), big.Exact, floatBit.Fits
+    }
+    if asUint32 == F32.NegativeZero {
+        return Bits(NegativeZero), big.Exact, floatBit.Fits
+    }
+
+    // Special Case #4: scaledExponent is smaller than the minimum float8e4m3
+    // representable exponent. (Underflow)
+    actualScaleFactor := int(scaleFactor) - int(F8E8M0.ExponentBias)
+    actualExponent := int(exponentBits) - F32.ExponentBias
+    scaledExponent := actualExponent - actualScaleFactor
+    // These exponents correspond to the subnormals in float32.
+    // They will underflow in float8e4m3
+    if scaledExponent < F32.ExponentMin {
+        return handleUnderflow(signBit, um)
+    }
+
+    // Special Case #5: scaledExponent is larger than the maximum float8e4m3
+    // representable exponent. (Overflow)
+    if scaledExponent > F32.ExponentMax {
+        return handleOverflow(signBit, om)
+    }
+
+    // Special Case #6: Input exceeds the maximum normal value (in magnitude)
+    // that can be represented in the float8e4m3 format. In this case, the
+    // input om [floatBit.OverflowMode] determines the response
+    if checkOverflow(scaledExponent, mantissaBits) {
+        return handleOverflow(signBit, om)
+    }
+
+    // Variables to store the return values in
+    var resultVal Bits
+    var resultAcc big.Accuracy
+
+    // To simplify the calculation, we need to calculate two quantities
+    // 1. aligned mantissa - For normal numbers this is the same as the
+    // original, but for subnormals we need to adjust it, because subnormals
+    // don't have an implicit 1.0 addition like normals do.
+    // 2. the adjusted exponent - For normal numbers, all we need to do is
+    // subtract the float32 bias and apply the float8e4m3 bias. But for
+    // subnormal numbers this should be exactly 0.
+    alignedMantissa := mantissaBits
+    adjustedExponent := uint32(scaledExponent + ExponentBias)
+
+    // Value that indicates whether any precision was lost when preprocessing
+    // the mantissa before passing it down to the rounding routines
+    lostPrecision := false
+
+    // Before performing any rounding, we need to make sure this exponent
+    // can actually be represented in the float32 format. If the exponent
+    // is smaller than the float8e4m3 format. If the exponent is smaller than
+    // the minimum exponent allowed in float8e4m3 (-6), this either results
+    // in underflow, or it rounds up or truncates to some subnormal number
+    // in the float8e4m3 format. We will need to take special care for the
+    // cases we truncate, because, we might underflow and we need to report
+    // that.
+    if actualExponent < ExponentMin {
+        // We start with the assumption that the number can be represented
+        // by a subnormal number in float8e4m3. Since subnormal numbers do not
+        // have an implicit 1.0 addition), we add an implicit 1.0, to the
+        // exponent LSB.
+        const (
+            float32ExponentLSB uint32 = 0b0_00000001_00000000000000000000000
+        )
+
+        // For subnormals, we need to appropriately calculate the aligned
+        // mantissa to accout for the deficit of the implicit 1.0 addition
+        alignedMantissa = mantissaBits | float32ExponentLSB
+
+        // And also, for the subnormal case, we need to set the adjusted
+        // exponent bits to 0
+        adjustedExponent = 0
+
+        // Now, to aligned the bits of the original format, with the mantissa
+        // of the destination format as a subnormal, we have to shift right
+        // until this implicit 1.0 addition falls to the mantissa bit
+        // corresponding to the appropriate power of 2 (this is the largest
+        // power of 2 in the number)
+        //
+        // Consider the following example. We have,
+        // f32_n = 2^(-8) * (1 + m_0/2 + m_1/4 + m_2/8 + ...)
+        //       = 2^(-6) * (1/4 + m_0/8 + m_1/16 + m_2/32 + ...)
+        // 
+        // Clearly, this caused the mantissa bit corresponding to 1/2 to
+        // turn to 0 and m_0 which originally would have been for 1/2, now
+        // corresponds to the 1/8 power. This is equivalent to a right-shift
+        // by 2 = (-6 - (-8))
+        //
+        // In general, by following the pattern, this shift amount is equal
+        // to the difference between the minimum representable exponent in
+        // float8e4m3 and the actual value of the exponent in float32 after
+        // scaling
+        shiftAmount := uint32(ExponentMin - scaledExponent)
+        for ; shiftAmount > 0; shiftAmount-- {
+            lastDigit := alignedMantissa & 0x1
+            if lastDigit == 1 {
+                // There was precision lost due to shifting which wouldn't
+                // be retained in the aligned mantissa. We need to track this
+                // to record accuracy
+                lostPrecision = true
+            }
+            alignedMantissa >>= 1
+        }
+
+        // Now that we have the value for the mantissa, we can determine
+        // the underflow case. There is underflow in the case when the part of
+        // the mantissa that has precision that can be represented in
+        // float8e4m3 is 0, but the rest of the mantissa has atleast 1 bit set
+        // i.e. all of the precision in the number is higher than that could
+        // be represented in float8e4m3. In this case, the response is
+        // handled by the input um [floatBit.UnderflowMode]
+        if checkUnderflow(alignedMantissa, lostPrecision) {
+            return handleUnderflow(signBit, um)
+        }
+
+    }
+
+    // Now that the mantissa bits are properly placed, and exponents are
+    // aligned and the overflow, underflow case is handled. We can handle the
+    // normal -> normal, subnormal case by performing the correct rounding
+
+    switch rm {
+        case floatBit.RoundTowardsZero:
+            resultVal, resultAcc = roundTowardsZero(signBit,
+                adjustedExponent, alignedMantissa, lostPrecision)
+        case floatBit.RoundTowardsNegativeInf:
+            resultVal, resultAcc = roundTowardsNegativeInf(signBit,
+                adjustedExponent, alignedMantissa, lostPrecision)
+        case floatBit.RoundTowardsPositiveInf:
+            resultVal, resultAcc = roundTowardsPositiveInf(signBit,
+                adjustedExponent, alignedMantissa, lostPrecision)
+        case floatBit.RoundHalfTowardsZero:
+            resultVal, resultAcc = roundHalfTowardsZero(signBit,
+                adjustedExponent, alignedMantissa, lostPrecision)
+        case floatBit.RoundHalfTowardsNegativeInf:
+            resultVal, resultAcc = roundHalfTowardsNegativeInf(signBit,
+                adjustedExponent, alignedMantissa, lostPrecision)
+        case floatBit.RoundHalfTowardsPositiveInf:
+            resultVal, resultAcc = roundHalfTowardsPositiveInf(signBit,
+                adjustedExponent, alignedMantissa, lostPrecision)
+        case floatBit.RoundNearestEven:
+            resultVal, resultAcc = roundNearestEven(signBit,
+                adjustedExponent, alignedMantissa, lostPrecision)
+        case floatBit.RoundNearestOdd:
+            resultVal, resultAcc = roundNearestOdd(signBit,
+                adjustedExponent, alignedMantissa, lostPrecision)
+    }
+
+    return resultVal, resultAcc, floatBit.Fits
 }
 
 // Utility function to check if the number with the given exponent and mantissa
 // bits would overflow when trying to represent it in a float8e4m3 value
 // with the given scale factor.
 // mantissaBits should occupy the bits as they would in a float32 number
-func checkOverflow(actualExponent int, mantissaBits uint32,
-    scaleFactor ScaleFactor) bool {
-
-    // Remove the scaling
-    scaledExponent := actualExponent - (int(scaleFactor) - 127)
-
+func checkOverflow(scaledExponent int, mantissaBits uint32) bool {
     if scaledExponent > ExponentMax {
         return true
     }
@@ -214,15 +440,15 @@ func checkOverflow(actualExponent int, mantissaBits uint32,
     return false
 }
 
-// Utility function to check if the number with the given exponent and mantissa
+// Utility function to check if the number with the given mantissa
 // bits would underflow when trying to represent it in a float8e4m3 value
-// with the given scaleFactor. Subnormals require shifting the mantissa to
+// assuming that exponent is min. Subnormals require shifting the mantissa to
 // align the exponents. This might cause loss of precision that cannot be
 // detected by the mantissaBits alone as they are already shifted. The
 // lostPrecision parameter helps us with that. If it's set to true then there
 // was precision lost when the mantissa was being aligned.
 func checkUnderflow(mantissaBits uint32, lostPrecision bool) bool {
-    // This assumes that the exponent after scaling  is 0, so any extra 
+    // This assumes that the exponent bits after scaling is 0, so any extra 
     // precision in the mantissa means underflow
     f8e4m3PrecisionMantissa := mantissaBits & f32Float8E4M3MantissaMask
     f8e4m3ExtraPrecisionMantissa := mantissaBits & 
@@ -232,6 +458,54 @@ func checkUnderflow(mantissaBits uint32, lostPrecision bool) bool {
         return true
     }
     return false
+}
+
+
+// Utility function that resturns the result for the case when
+// the conversion results in overflow. Since float8e4m3 does not
+// support infinites, the [floatBit.SaturateInf] returns NaN instead
+func handleOverflow(signBit uint32, om floatBit.OverflowMode) (Bits,
+    big.Accuracy, floatBit.Status) {
+    switch om {
+    case floatBit.SaturateInf:
+        fallthrough
+    case floatBit.MakeNaN:
+        if signBit == 0 {
+            return Bits(PositiveNaN), big.Above, floatBit.Overflow
+        }
+        return Bits(NegativeNaN), big.Below, floatBit.Overflow
+    case floatBit.SaturateMax:
+        if signBit == 0 {
+            // The maximum normal in float8e4m3 is smaller than any
+            // number this function will be invoked for
+            return Bits(PositiveMaxNormal), big.Below, floatBit.Overflow
+        }
+        return Bits(NegativeMaxNormal), big.Above, floatBit.Overflow
+    default:
+        panic("Unsupported OverflowMode encountered")
+    }
+}
+
+// Utility function that resturns the result for the case when
+// the conversion results in underflow
+func handleUnderflow(signBit uint32, um floatBit.UnderflowMode) (Bits,
+big.Accuracy, floatBit.Status) {
+    switch um {
+    case floatBit.FlushToZero:
+        if signBit == 0 {
+            // Zero is less than any positive subnormal
+            return Bits(PositiveZero), big.Below, floatBit.Underflow
+        }
+        return Bits(NegativeZero), big.Above, floatBit.Underflow
+    case floatBit.SaturateMin:
+        if signBit == 0 {
+            // Min subnormal of float32 is larger than any float64 subnormal
+            return Bits(PositiveMinSubnormal), big.Above, floatBit.Underflow
+        }
+        return Bits(NegativeMinSubnormal), big.Below, floatBit.Underflow
+    default:
+        panic("Unsupported UnderflowMode encountered")
+    }
 }
 
 // ToFloatFormat converts the given [Bits] type representing the bits that
@@ -289,7 +563,7 @@ func (b* Bits) ToFloatFormat() floatBit.FloatBitFormat {
 // Conversion error returns the difference between the input [big.Float]
 // number and the float8e4m3 number represented by the bits in the [Bits]
 // receiver when it's scaled with the given scale factor
-func (b* Bits) ConversionError(input* big.Float, scaleFactor ScaleFactor) (
+func (b* Bits) ConversionError(input* big.Float, scaleFactor F8E8M0.ScaleFactor) (
     big.Float, error) {
     // If the receiver is a NaN then we return an error
     asFloat32 := b.ToFloat32(scaleFactor)

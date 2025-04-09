@@ -89,7 +89,7 @@ func TestHandleOverflow(t *testing.T) {
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) || (resultStatus != tt.goldenStatus) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("SignBit: %v\tOverflowMode: %v\n", tt.signBit, tt.om)
-				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
+				t.Errorf("Expected Result: %0#4x, Got: %0#4x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 				t.Errorf("Expected Status: %v, Got: %v\n", tt.goldenStatus, resultStatus)
 			}
@@ -121,7 +121,7 @@ func TestHandleUnderflow(t *testing.T) {
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) || (resultStatus != tt.goldenStatus) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("SignBit: %v\tUnderflowMode: %v\n", tt.signBit, tt.um)
-				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
+				t.Errorf("Expected Result: %0#4x, Got: %0#4x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 				t.Errorf("Expected Status: %v, Got: %v\n", tt.goldenStatus, resultStatus)
 			}

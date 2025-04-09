@@ -254,7 +254,7 @@ func FromFloat32(input float32, rm floatBit.RoundingMode,
 	}
 
 	// Special Case #5: Input exceeds the maximum normal value (in magnitude)
-	// that can be represented in the float32 format. In this case, the input om
+	// that can be represented in the float16 format. In this case, the input om
 	// [floatBit.OverflowMode] determines the response.
 
 	// First off, we calculate the actual value of the exponent. To do this,
@@ -285,8 +285,8 @@ func FromFloat32(input float32, rm floatBit.RoundingMode,
 	lostPrecision := false
 
 	// Before performing any rounding, we need to make sure this exponent
-	// can actually be represented in the float32 format. If the exponent,
-	// is smaller than the minimum exponent allowed in float32 (-126), this
+	// can actually be represented in the float16 format. If the exponent,
+	// is smaller than the minimum exponent allowed in float16 (-14), this
 	// either results in underflow, or it rounds up or trunc to some subnormal
 	// number in the float32 format. We will need to take special care for
 	// the cases where we truncate, because we might underflow and we need
@@ -325,7 +325,7 @@ func FromFloat32(input float32, rm floatBit.RoundingMode,
 		//
 		// In general, by following the pattern, this shift amount is equal
 		// to the difference between the minimum representable exponent (actual)
-		// and the actual value of the exponent in float64.
+		// and the actual value of the exponent in float32.
 		shiftAmount := uint32(ExponentMin - actualExponent)
 		for ; shiftAmount > 0; shiftAmount-- {
 			lastDigit := alignedMantissa & 0x1
@@ -338,9 +338,9 @@ func FromFloat32(input float32, rm floatBit.RoundingMode,
 		// Now that we have the value for the mantissa, we can determine
 		// the underflow case. There is underflow, in the case when the
 		// part of the mantissa that has the precision that can be represented
-		// in float32 is 0 (bits m52 to m30), but the rest of the mantissa has
+		// in float16 is 0 (bits m22 to m13), but the rest of the mantissa has
 		// atleast 1 bit set i.e. all of the precision in the number is higher
-		// than that could be represented in float32. In this case, the response
+		// than that could be represented in float16. In this case, the response
 		// is handled by the input um [floatBit.UnderflowMode]
 		if checkUnderflow(alignedMantissa, lostPrecision) {
 			return handleUnderflow(signBit, um)
@@ -463,7 +463,7 @@ func handleOverflow(signBit uint32, om floatBit.OverflowMode) (Bits,
 		return Bits(NegativeNaN), big.Below, floatBit.Overflow
 	case floatBit.SaturateMax:
 		if signBit == 0 {
-			// The maximum normal in float32 is smaller than any number
+			// The maximum normal in float16 is smaller than any number
 			// this function will be invoked for
 			return Bits(PositiveMaxNormal), big.Below, floatBit.Overflow
 		}
