@@ -7,6 +7,10 @@ converted number, conversion error etc.
 * BFloat16
 * Float16
 
+## Web App
+
+A web-based frontend for this application can be found [https://shantanu-gontia.github.io/float-conv/web](here)
+
 ## Usage
 
 ```bash
