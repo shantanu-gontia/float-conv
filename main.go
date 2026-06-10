@@ -91,7 +91,7 @@ func handleFloat32(bf *big.Float, rm floatBit.RoundingMode, om floatBit.Overflow
 	// Print the bits in a table
 	fmt.Print(floatVal.ToFloatFormat().AsTable())
 
-	// Print the decimal value
+  // Print the decimal value
 	asBigFloat := floatVal.ToBigFloat()
 	fmt.Printf("Decimal: %s\n", asBigFloat.Text('e', -1))
 
