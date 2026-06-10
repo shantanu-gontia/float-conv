@@ -217,10 +217,12 @@
 
         .bit-layout {
             display: flex;
-            flex-direction: column;
-            gap: 1rem;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 1.5rem;
             background: var(--bg-primary);
-            padding: 1rem;
+            padding: 1rem 1.5rem;
             border-radius: 8px;
             border: 1px solid var(--border);
             margin-bottom: 1rem;
@@ -230,6 +232,7 @@
         .bit-segment {
             display: flex;
             flex-direction: column;
+            align-items: center;
             gap: 0.5rem;
         }
 
@@ -241,7 +244,7 @@
 
         .bit-label {
             font-family: var(--font-mono);
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -249,15 +252,16 @@
 
         .bit-value-led {
             font-family: var(--font-mono);
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 500;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             color: var(--accent);
-            text-shadow: 0 0 8px var(--accent), 0 0 2px var(--accent);
+            text-shadow: 0 0 10px var(--accent), 0 0 4px var(--accent);
             background: rgba(0, 255, 159, 0.05);
-            padding: 0.5rem 0.75rem;
+            padding: 0.4rem 0.6rem;
             border-radius: 4px;
             border: 1px solid var(--accent-dim);
+            white-space: nowrap;
         }
 
         .bit-divider {
