@@ -9,7 +9,7 @@ converted number, conversion error etc.
 
 ## Web App
 
-A web-based frontend for this application can be found [https://shantanu-gontia.github.io/float-conv/web](here)
+A web-based frontend for this application can be found [here](https://shantanu-gontia.github.io/float-conv/web)
 
 ## Usage
 
