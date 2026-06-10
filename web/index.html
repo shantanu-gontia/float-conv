@@ -162,6 +162,12 @@
             gap: 1rem;
         }
 
+        .row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
         button {
             font-family: var(--font-mono);
             font-size: 1rem;
@@ -371,6 +377,9 @@
                                 <option value="rthalfneginf">Half to -Inf</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div class="row-2">
                         <div class="input-group">
                             <label for="overflow-mode">Overflow</label>
                             <select id="overflow-mode">
@@ -379,14 +388,13 @@
                                 <option value="nan">NaN</option>
                             </select>
                         </div>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="underflow-mode">Underflow</label>
-                        <select id="underflow-mode">
-                            <option value="satmin">Saturate Min</option>
-                            <option value="flushzero">Flush to Zero</option>
-                        </select>
+                        <div class="input-group">
+                            <label for="underflow-mode">Underflow</label>
+                            <select id="underflow-mode">
+                                <option value="satmin">Saturate Min</option>
+                                <option value="flushzero">Flush to Zero</option>
+                            </select>
+                        </div>
                     </div>
 
                     <button id="convert-btn" onclick="performConvert()" disabled>Convert</button>
