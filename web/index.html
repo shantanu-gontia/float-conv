@@ -60,15 +60,40 @@
             letter-spacing: -0.02em;
         }
 
-        .theme-select {
-            font-family: var(--font-sans);
-            font-size: 0.875rem;
-            padding: 0.5rem 0.75rem;
+        .theme-toggle {
+            display: flex;
             background: var(--surface);
-            color: var(--text);
             border: 1px solid var(--border);
             border-radius: 8px;
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .theme-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 30px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            transition: background 0.15s;
+        }
+
+        .theme-btn:hover {
+            background: var(--border);
+        }
+
+        .theme-btn.active {
+            background: var(--accent);
+        }
+
+        .theme-btn.active .icon {
+            filter: grayscale(100%) brightness(2);
         }
 
         .card {
@@ -327,11 +352,17 @@
     <div class="container">
         <header>
             <h1>Float Converter</h1>
-            <select class="theme-select" id="theme" onchange="setTheme(this.value)">
-                <option value="system">System</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-            </select>
+            <div class="theme-toggle">
+                <button class="theme-btn active" id="theme-system" onclick="setTheme('system')" title="System">
+                    <span class="icon">💻</span>
+                </button>
+                <button class="theme-btn" id="theme-light" onclick="setTheme('light')" title="Light">
+                    <span class="icon">☀️</span>
+                </button>
+                <button class="theme-btn" id="theme-dark" onclick="setTheme('dark')" title="Dark">
+                    <span class="icon">🌙</span>
+                </button>
+            </div>
         </header>
 
         <div class="card">
@@ -448,8 +479,6 @@
 
     <script src="wasm_exec.js"></script>
     <script>
-        const themeSelect = document.getElementById('theme');
-
         function setTheme(theme) {
             if (theme === 'system') {
                 document.documentElement.removeAttribute('data-theme');
@@ -457,14 +486,14 @@
                 document.documentElement.setAttribute('data-theme', theme);
             }
             localStorage.setItem('float-conv-theme', theme);
+
+            document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('theme-' + theme).classList.add('active');
         }
 
         (function initTheme() {
-            const saved = localStorage.getItem('float-conv-theme');
-            if (saved) {
-                themeSelect.value = saved;
-                setTheme(saved);
-            }
+            const saved = localStorage.getItem('float-conv-theme') || 'system';
+            setTheme(saved);
         })();
 
         let wasmReady = false;
