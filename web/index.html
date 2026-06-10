@@ -3,218 +3,473 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Float-Conv Web</title>
+    <title>Float Converter</title>
     <style>
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #1a1f2e;
+            --bg-tertiary: #252d3d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent: #00ff9f;
+            --accent-dim: #00ff9f40;
+            --accent-glow: 0 0 20px #00ff9f40;
+            --danger: #ff6b6b;
+            --warning: #ffd93d;
+            --border: #30363d;
+            --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #e2e8f0;
+            --bg-tertiary: #cbd5e1;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent: #059669;
+            --accent-dim: #05966930;
+            --accent-glow: 0 0 20px #05966930;
+            --border: #94a3b8;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a2e;
-            color: #eee;
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
             padding: 2rem;
+            transition: background 0.3s, color 0.3s;
         }
+
         .container {
-            max-width: 900px;
+            max-width: 800px;
             margin: 0 auto;
         }
-        h1 {
-            text-align: center;
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 2rem;
-            color: #00d9ff;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
         }
-        .card {
-            background: #16213e;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+
+        h1 {
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            color: var(--accent);
+            text-shadow: var(--accent-glow);
+            letter-spacing: 2px;
         }
-        .form-group {
-            margin-bottom: 1rem;
+
+        h1::before {
+            content: "> ";
+            color: var(--text-secondary);
         }
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #aaa;
-            font-size: 0.9rem;
-        }
-        input, select {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #333;
+
+        .theme-select {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
             border-radius: 6px;
-            background: #0f0f23;
-            color: #fff;
-            font-size: 1rem;
+            cursor: pointer;
         }
-        input:focus, select:focus {
+
+        .theme-select:focus {
             outline: none;
-            border-color: #00d9ff;
+            border-color: var(--accent);
+            box-shadow: var(--accent-glow);
         }
-        .row {
+
+        .terminal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: var(--bg-tertiary);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .terminal-dot.red { background: #ff5f56; }
+        .terminal-dot.yellow { background: #ffbd2e; }
+        .terminal-dot.green { background: #27ca40; }
+
+        .terminal-body {
+            padding: 1.5rem;
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="text"], select {
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: var(--accent-glow);
+        }
+
+        .row-3 {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 1rem;
         }
+
         button {
-            width: 100%;
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            font-weight: 600;
             padding: 1rem;
-            background: linear-gradient(135deg, #00d9ff, #0066ff);
+            background: var(--accent);
+            color: var(--bg-primary);
             border: none;
             border-radius: 6px;
-            color: #fff;
-            font-size: 1rem;
-            font-weight: bold;
             cursor: pointer;
-            transition: opacity 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: transform 0.1s, box-shadow 0.2s;
+            margin-top: 1rem;
         }
-        button:hover {
-            opacity: 0.9;
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--accent-glow);
         }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        #result {
+
+        .output {
             display: none;
+            margin-top: 1.5rem;
         }
-        #result.show {
+
+        .output.show {
             display: block;
         }
-        .result-header {
+
+        .output-header {
+            font-family: var(--font-mono);
+            font-size: 1.25rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            text-shadow: var(--accent-glow);
+        }
+
+        .bit-layout {
+            display: grid;
+            grid-template-columns: auto 1fr auto 1fr auto 1fr;
+            gap: 0.5rem;
+            align-items: center;
+            background: var(--bg-primary);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 1rem;
+            overflow-x: auto;
+        }
+
+        .bit-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .bit-value {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: var(--accent);
+            letter-spacing: 1px;
+        }
+
+        .bit-divider {
+            color: var(--text-secondary);
             font-size: 1.5rem;
-            font-weight: bold;
-            color: #00d9ff;
-            margin-bottom: 1rem;
         }
-        .bit-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 1rem;
+
+        .result-grid {
+            display: grid;
+            gap: 0.5rem;
         }
-        .bit-table th, .bit-table td {
-            padding: 0.5rem;
-            text-align: center;
-            border: 1px solid #333;
-        }
-        .bit-table th {
-            background: #0f0f23;
-            color: #00d9ff;
-        }
-        .result-row {
+
+        .result-item {
             display: flex;
             justify-content: space-between;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid #333;
+            padding: 0.75rem 1rem;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            border: 1px solid var(--border);
         }
+
         .result-label {
-            color: #888;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
         }
+
         .result-value {
-            color: #fff;
-            font-family: monospace;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: var(--text-primary);
         }
+
         .status {
             display: inline-block;
             padding: 0.25rem 0.75rem;
             border-radius: 4px;
-            font-size: 0.85rem;
-            font-weight: bold;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
         }
-        .status-fits { background: #00d9ff; color: #000; }
-        .status-overflow { background: #ff6b6b; color: #000; }
-        .status-underflow { background: #ffd93d; color: #000; }
-        .error {
-            color: #ff6b6b;
+
+        .status-fits { background: var(--accent); color: var(--bg-primary); }
+        .status-overflow { background: var(--danger); color: #000; }
+        .status-underflow { background: var(--warning); color: #000; }
+
+        .error-box {
+            display: none;
+            margin-top: 1rem;
             padding: 1rem;
-            background: rgba(255,107,107,0.1);
-            border-radius: 6px;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid var(--danger);
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: var(--danger);
         }
+
+        .error-box.show {
+            display: block;
+        }
+
         .loading {
             text-align: center;
             padding: 2rem;
-            color: #888;
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
         }
+
+        .loading::after {
+            content: "";
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { content: ""; }
+            51%, 100% { content: "_"; }
+        }
+
         @media (max-width: 600px) {
-            .row { grid-template-columns: 1fr; }
+            .row-3 { grid-template-columns: 1fr; }
+            .bit-layout { 
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            .bit-divider { display: none; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Float-Conv Web</h1>
-        
-        <div class="card" id="input-card">
-            <div class="form-group">
-                <label for="number">Input Number</label>
-                <input type="text" id="number" placeholder="e.g., 0.125 or 1e-10" value="0.125">
+        <header>
+            <h1>FLOAT CONVERTER</h1>
+            <select class="theme-select" id="theme" onchange="setTheme(this.value)">
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark" selected>Dark</option>
+            </select>
+        </header>
+
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-dot red"></div>
+                <div class="terminal-dot yellow"></div>
+                <div class="terminal-dot green"></div>
             </div>
-            
-            <div class="row">
-                <div class="form-group">
-                    <label for="format">Format</label>
-                    <select id="format">
-                        <option value="float32">Float32</option>
-                        <option value="bfloat16">BFloat16</option>
-                        <option value="float16">Float16</option>
-                    </select>
+            <div class="terminal-body">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="number">Input Value</label>
+                        <input type="text" id="number" value="0.125" placeholder="e.g., 0.125 or 1e-10">
+                    </div>
+
+                    <div class="row-3">
+                        <div class="input-group">
+                            <label for="format">Format</label>
+                            <select id="format">
+                                <option value="float32">Float32</option>
+                                <option value="bfloat16">BFloat16</option>
+                                <option value="float16">Float16</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="round-mode">Rounding</label>
+                            <select id="round-mode">
+                                <option value="rne">Nearest Even</option>
+                                <option value="rno">Nearest Odd</option>
+                                <option value="rtz">Towards Zero</option>
+                                <option value="rtposinf">Towards +Inf</option>
+                                <option value="rtneginf">Towards -Inf</option>
+                                <option value="rthalfzero">Half to Zero</option>
+                                <option value="rthalfposinf">Half to +Inf</option>
+                                <option value="rthalfneginf">Half to -Inf</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="overflow-mode">Overflow</label>
+                            <select id="overflow-mode">
+                                <option value="satmax">Saturate Max</option>
+                                <option value="satinf">Saturate Inf</option>
+                                <option value="nan">NaN</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="underflow-mode">Underflow</label>
+                        <select id="underflow-mode">
+                            <option value="satmin">Saturate Min</option>
+                            <option value="flushzero">Flush to Zero</option>
+                        </select>
+                    </div>
+
+                    <button id="convert-btn" onclick="performConvert()" disabled>Convert</button>
                 </div>
-                <div class="form-group">
-                    <label for="round-mode">Rounding Mode</label>
-                    <select id="round-mode">
-                        <option value="rne">Nearest Even</option>
-                        <option value="rno">Nearest Odd</option>
-                        <option value="rtz">Towards Zero</option>
-                        <option value="rtposinf">Towards +Inf</option>
-                        <option value="rtneginf">Towards -Inf</option>
-                        <option value="rthalfzero">Half Towards Zero</option>
-                        <option value="rthalfposinf">Half Towards +Inf</option>
-                        <option value="rthalfneginf">Half Towards -Inf</option>
-                    </select>
+
+                <div class="output" id="output">
+                    <div class="output-header" id="output-format"></div>
+                    <div class="bit-layout">
+                        <span class="bit-label">Sign</span>
+                        <span class="bit-value" id="bit-sign"></span>
+                        <span class="bit-divider">|</span>
+                        <span class="bit-label">Exponent</span>
+                        <span class="bit-value" id="bit-exponent"></span>
+                        <span class="bit-divider">|</span>
+                        <span class="bit-label">Mantissa</span>
+                        <span class="bit-value" id="bit-mantissa"></span>
+                    </div>
+                    <div class="result-grid">
+                        <div class="result-item">
+                            <span class="result-label">Decimal</span>
+                            <span class="result-value" id="res-decimal"></span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Hexfloat</span>
+                            <span class="result-value" id="res-hexfloat"></span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Binary</span>
+                            <span class="result-value" id="res-binary"></span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Hexadecimal</span>
+                            <span class="result-value" id="res-hex"></span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Accuracy</span>
+                            <span class="result-value" id="res-accuracy"></span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Error</span>
+                            <span class="result-value" id="res-error"></span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Status</span>
+                            <span class="result-value" id="res-status"></span>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="overflow-mode">Overflow Mode</label>
-                    <select id="overflow-mode">
-                        <option value="satmax">Saturate Max</option>
-                        <option value="satinf">Saturate Inf</option>
-                        <option value="nan">NaN</option>
-                    </select>
-                </div>
+
+                <div class="error-box" id="error-box"></div>
             </div>
-            
-            <div class="form-group">
-                <label for="underflow-mode">Underflow Mode</label>
-                <select id="underflow-mode">
-                    <option value="satmin">Saturate Min</option>
-                    <option value="flushzero">Flush to Zero</option>
-                </select>
-            </div>
-            
-            <button id="convert-btn" onclick="performConvert()" disabled>Convert</button>
-        </div>
-        
-        <div class="card" id="result">
-            <div class="result-header" id="result-format"></div>
-            <div id="result-content"></div>
-        </div>
-        
-        <div class="card" id="error-card" style="display:none;">
-            <div class="error" id="error-message"></div>
         </div>
     </div>
-    
+
     <div class="loading" id="loading">
-        <p>Loading WebAssembly module...</p>
+        <p>Initializing WebAssembly</p>
     </div>
 
     <script src="wasm_exec.js"></script>
     <script>
+        const themeSelect = document.getElementById('theme');
+
+        function setTheme(theme) {
+            if (theme === 'system') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+            localStorage.setItem('float-conv-theme', theme);
+        }
+
+        (function initTheme() {
+            const saved = localStorage.getItem('float-conv-theme');
+            if (saved) {
+                themeSelect.value = saved;
+                setTheme(saved);
+            } else {
+                setTheme('dark');
+            }
+        })();
+
         let wasmReady = false;
-        
+
         async function initWasm() {
             try {
                 const go = new Go();
@@ -226,21 +481,21 @@
                 document.getElementById('convert-btn').disabled = false;
                 wasmReady = true;
             } catch (err) {
-                document.getElementById('loading').innerHTML = '<p style="color:#ff6b6b;">Failed to load WebAssembly: ' + err.message + '</p>';
+                document.getElementById('loading').innerHTML = '<p style="color:var(--danger);">Failed to load WebAssembly: ' + err.message + '</p>';
             }
         }
-        
+
         function performConvert() {
             if (!wasmReady) return;
-            
+
             const number = document.getElementById('number').value;
             const format = document.getElementById('format').value;
             const roundMode = document.getElementById('round-mode').value;
             const overflowMode = document.getElementById('overflow-mode').value;
             const underflowMode = document.getElementById('underflow-mode').value;
-            
+
             const result = window.floatConvConvert(number, format, roundMode, overflowMode, underflowMode);
-            
+
             try {
                 const data = JSON.parse(result);
                 displayResult(data);
@@ -248,40 +503,34 @@
                 showError('Failed to parse result: ' + result);
             }
         }
-        
+
         function displayResult(data) {
-            document.getElementById('error-card').style.display = 'none';
-            document.getElementById('result').classList.add('show');
-            
-            document.getElementById('result-format').textContent = data.format;
-            
-            const statusClass = data.status === 'Overflow' ? 'status-overflow' : 
+            document.getElementById('error-box').classList.remove('show');
+            document.getElementById('output').classList.add('show');
+
+            document.getElementById('output-format').textContent = '// ' + data.format + ' CONVERSION';
+            document.getElementById('bit-sign').textContent = data.sign;
+            document.getElementById('bit-exponent').textContent = data.exponent;
+            document.getElementById('bit-mantissa').textContent = data.mantissa;
+            document.getElementById('res-decimal').textContent = data.decimal;
+            document.getElementById('res-hexfloat').textContent = data.hexfloat;
+            document.getElementById('res-binary').textContent = data.binary;
+            document.getElementById('res-hex').textContent = data.hexadecimal;
+            document.getElementById('res-accuracy').textContent = data.accuracy;
+            document.getElementById('res-error').textContent = data.error;
+
+            const statusEl = document.getElementById('res-status');
+            const statusClass = data.status === 'Overflow' ? 'status-overflow' :
                                data.status === 'Underflow' ? 'status-underflow' : 'status-fits';
-            
-            let html = `
-                <table class="bit-table">
-                    <tr><th>Sign</th><th>Exponent</th><th>Mantissa</th></tr>
-                    <tr><td>${data.sign}</td><td>${data.exponent}</td><td>${data.mantissa}</td></tr>
-                </table>
-                
-                <div class="result-row"><span class="result-label">Decimal</span><span class="result-value">${data.decimal}</span></div>
-                <div class="result-row"><span class="result-label">Hexfloat</span><span class="result-value">${data.hexfloat}</span></div>
-                <div class="result-row"><span class="result-label">Binary</span><span class="result-value">${data.binary}</span></div>
-                <div class="result-row"><span class="result-label">Hexadecimal</span><span class="result-value">${data.hexadecimal}</span></div>
-                <div class="result-row"><span class="result-label">Accuracy</span><span class="result-value">${data.accuracy}</span></div>
-                <div class="result-row"><span class="result-label">Conversion Error</span><span class="result-value">${data.error}</span></div>
-                <div class="result-row"><span class="result-label">Status</span><span class="result-value"><span class="status ${statusClass}">${data.status}</span></span></div>
-            `;
-            
-            document.getElementById('result-content').innerHTML = html;
+            statusEl.innerHTML = '<span class="status ' + statusClass + '">' + data.status + '</span>';
         }
-        
+
         function showError(msg) {
-            document.getElementById('result').classList.remove('show');
-            document.getElementById('error-card').style.display = 'block';
-            document.getElementById('error-message').textContent = msg;
+            document.getElementById('output').classList.remove('show');
+            document.getElementById('error-box').classList.add('show');
+            document.getElementById('error-box').textContent = '[ERROR] ' + msg;
         }
-        
+
         initWasm();
     </script>
 </body>
