@@ -118,7 +118,44 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
             margin-bottom: 0.5rem;
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: var(--border);
+            border-radius: 50%;
+            cursor: help;
+            position: relative;
+        }
+
+        .info-icon:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text);
+            color: var(--bg);
+            font-size: 11px;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: 0;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            white-space: nowrap;
+            z-index: 10;
+            max-width: 240px;
+            white-space: normal;
         }
 
         input[type="text"] {
@@ -269,6 +306,9 @@
         .result-label {
             font-size: 0.875rem;
             color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
         }
 
         .result-value {
@@ -385,7 +425,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="label" for="round-mode">Rounding</label>
+                        <label class="label" for="round-mode">Rounding<span class="info-icon" data-tooltip="How to round the result when it cannot be represented exactly">i</span></label>
                         <select id="round-mode">
                             <option value="rne">Nearest Even</option>
                             <option value="rno">Nearest Odd</option>
@@ -403,7 +443,7 @@
             <div class="section">
                 <div class="row">
                     <div>
-                        <label class="label" for="overflow-mode">Overflow</label>
+                        <label class="label" for="overflow-mode">Overflow<span class="info-icon" data-tooltip="What to do when the result is too large to represent">i</span></label>
                         <select id="overflow-mode">
                             <option value="satmax">Saturate Max</option>
                             <option value="satinf">Saturate Inf</option>
@@ -411,7 +451,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="label" for="underflow-mode">Underflow</label>
+                        <label class="label" for="underflow-mode">Underflow<span class="info-icon" data-tooltip="What to do when the result is too small to represent (denormal)">i</span></label>
                         <select id="underflow-mode">
                             <option value="satmin">Saturate Min</option>
                             <option value="flushzero">Flush to Zero</option>
@@ -458,15 +498,15 @@
                         <span class="result-value" id="res-hex">—</span>
                     </div>
                     <div class="result-row">
-                        <span class="result-label">Accuracy</span>
+                        <span class="result-label">Accuracy<span class="info-icon" data-tooltip="Number of significant bits correctly preserved">i</span></span>
                         <span class="result-value" id="res-accuracy">—</span>
                     </div>
                     <div class="result-row">
-                        <span class="result-label">Error</span>
+                        <span class="result-label">Error<span class="info-icon" data-tooltip="Difference between input and converted-back value">i</span></span>
                         <span class="result-value" id="res-error">—</span>
                     </div>
                     <div class="result-row">
-                        <span class="result-label">Status</span>
+                        <span class="result-label">Status<span class="info-icon" data-tooltip="Whether the conversion was exact, overflowed, or underflowed">i</span></span>
                         <span class="result-value" id="res-status">—</span>
                     </div>
                 </div>
