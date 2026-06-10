@@ -28,12 +28,12 @@ func roundDown(signBit, exponentBits,
 	float16Mantissa := uint16(mantissaF16Precision >> 13)
 
 	// For this rounding mode, we only need to add 1 to the Least-precision
-	// mantissa, if the input was positive, to bring it closer to +inf.
-	// For negative numbers, this is achieved by simply truncating.
+	// mantissa, if the input was negative, to bring it closer to -inf.
+	// For positive numbers, this is achieved by simply truncating.
 
 	exponentMantissaComposite := (float16Exponent | float16Mantissa)
 
-	// If positive and there is extra precision, then add 1
+	// If negative and there is extra precision, then add 1
 	if (float16Sign != 0) && (mantissaExtraPrecision != 0 || lostPrecision) {
 		exponentMantissaComposite += 1
 	}
@@ -41,7 +41,8 @@ func roundDown(signBit, exponentBits,
 	resultVal := Bits(float16Sign | exponentMantissaComposite)
 
 	resultAcc := big.Exact
-	// If there was extra precision bits set, then we need to
+	// If there was extra precision bits set, then we need to update the
+    // accuracy
 	if mantissaExtraPrecision != 0 || lostPrecision {
 		// We always round to a smaller value
 		resultAcc = big.Below

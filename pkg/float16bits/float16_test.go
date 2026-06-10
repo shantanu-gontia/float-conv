@@ -38,7 +38,7 @@ func TestToFloat32(t *testing.T) {
 		},
 		{
 			input:  0b1_00000_0000000000,
-			golden: -0.0,
+			golden: math.Float32frombits(F32.NegativeZero),
 		},
 		{
 			input:  0b0_00000_1111111111,
@@ -89,7 +89,7 @@ func TestHandleOverflow(t *testing.T) {
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) || (resultStatus != tt.goldenStatus) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("SignBit: %v\tOverflowMode: %v\n", tt.signBit, tt.om)
-				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
+				t.Errorf("Expected Result: %0#4x, Got: %0#4x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 				t.Errorf("Expected Status: %v, Got: %v\n", tt.goldenStatus, resultStatus)
 			}
@@ -121,7 +121,7 @@ func TestHandleUnderflow(t *testing.T) {
 			if (resultVal != tt.goldenVal) || (resultAcc != tt.goldenAcc) || (resultStatus != tt.goldenStatus) {
 				t.Logf("Failed Input Set:\n")
 				t.Logf("SignBit: %v\tUnderflowMode: %v\n", tt.signBit, tt.um)
-				t.Errorf("Expected Result: %0#8x, Got: %0#8x\n", tt.goldenVal, resultVal)
+				t.Errorf("Expected Result: %0#4x, Got: %0#4x\n", tt.goldenVal, resultVal)
 				t.Errorf("Expected Accuracy: %v, Got: %v\n", tt.goldenAcc, resultAcc)
 				t.Errorf("Expected Status: %v, Got: %v\n", tt.goldenStatus, resultStatus)
 			}
@@ -400,8 +400,8 @@ func TestRoundTowardsPositiveInf(t *testing.T) {
 
 func TestRoundTowardsNegativeInf(t *testing.T) {
 
-	// Rounding towards positive infinity involves adding 1 if the number
-	// is positive, otherwise truncating, so that the number is closer to +inf
+	// Rounding towards negative infinity involves adding 1 if the number
+	// is negative, otherwise truncating, so that the number is closer to -inf
 
 	testCases := []struct {
 		// Inputs
@@ -1021,7 +1021,7 @@ func TestRoundHalfTowardsNegativeInf(t *testing.T) {
 func TestRoundNearestEven(t *testing.T) {
 	// Rounding half towards positive infinity involves rounding to the nearest
 	// representable number, and breaking ties by rounding towards the
-	// number closer to +inf
+	// number with LSB = 0
 
 	testCases := []struct {
 		// Inputs
@@ -1240,7 +1240,7 @@ func TestRoundNearestEven(t *testing.T) {
 func TestRoundNearestOdd(t *testing.T) {
 	// Rounding half towards positive infinity involves rounding to the nearest
 	// representable number, and breaking ties by rounding towards the
-	// number closer to +inf
+	// number with LSB = 1
 
 	testCases := []struct {
 		// Inputs

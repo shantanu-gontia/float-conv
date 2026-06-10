@@ -31,7 +31,7 @@ func truncate(signBit, exponentBits, mantissaBits uint32,
 	resultAcc := big.Exact
 
 	// If there was extra precision, then the number did not fit in the
-	// float32 format, so we need to report the status appropriately
+	// float16 format, so we need to report the status appropriately
 	if mantissaExtraPrecision != 0 || lostPrecision {
 		if signBit == 0 {
 			resultAcc = big.Below

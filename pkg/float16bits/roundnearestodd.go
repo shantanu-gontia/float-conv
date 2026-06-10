@@ -22,12 +22,12 @@ func roundNearestOdd(signBit, exponentBits, mantissaBits uint32,
 	// break ties by rounding towards the number that is even (LSB is 0)
 
 	// LSB  |  Extra Precision Bits
-	//  m9    m8 m7 m6
-	// 1. if m8 m7 m6 ... > 1 0 0 0 ... (more than half) we round up
-	// 2. if m8 m7 m6 ... < 1 0 0 0 ... (less than half) we truncate
-	// 3. if m8 m7 m6 ... == 1 0 0 0 ... (exactly half), then
-	// 	  3.1 m9 == 1, we truncate
-	//    3.2 m9 == 0, we round up
+	// m13    m12 m11 m10 ... m0
+	// 1. if m12 m11 m10 ... > 1 0 0 0 ... (more than half) we round up
+	// 2. if m12 m11 m10 ... < 1 0 0 0 ... (less than half) we truncate
+	// 3. if m12 m11 m10 ... == 1 0 0 0 ... (exactly half), then
+	// 	  3.1 m13 == 1, we truncate
+	//    3.2 m13 == 0, we round up
 
 	mantissaF16Precision := mantissaBits & f32Float16MantissaMask
 	mantissaExtraPrecision := mantissaBits & f32Float16HalfSubnormalMask
@@ -55,7 +55,7 @@ func roundNearestOdd(signBit, exponentBits, mantissaBits uint32,
 
 	mantissaF32LSB := mantissaBits & f32Float16SubnormalLSB
 	// In the case we're at the mid-point, we only add 1, if the LSB of the
-	// float32 retained mantissa is 0
+	// float16 retained mantissa is 0
 	if (mantissaF32LSB == 0) && (mantissaExtraPrecision ==
 		f32Float16HalfSubnormalLSB) && !lostPrecision {
 		exponentMantissaComposite += 1
